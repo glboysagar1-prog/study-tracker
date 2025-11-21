@@ -1,0 +1,31 @@
+#!/usr/bin/env python3
+
+def print_setup_instructions():
+    print("=" * 60)
+    print("GTU Exam Preparation Application - Supabase Setup")
+    print("=" * 60)
+    print()
+    print("DATABASE TABLES CREATION INSTRUCTIONS")
+    print("-" * 40)
+    print()
+    print("1. Open your web browser")
+    print("2. Go to: https://phhrwkcqmuktajuuswza.supabase.co")
+    print("3. Sign in to your Supabase account")
+    print("4. In the left sidebar, click on 'SQL Editor'")
+    print("5. Open the file 'supabase_tables_simple.sql' from your project")
+    print("6. Copy the entire content of the file")
+    print("7. Paste it into the SQL Editor in Supabase Dashboard")
+    print("8. Click the 'Run' button to execute the script")
+    print()
+    print("FILE LOCATION:")
+    print("/Users/sagar/Documents/gtu/supabase_tables_simple.sql")
+    print()
+    print("NEXT STEPS AFTER CREATING TABLES:")
+    print("1. Configure Row Level Security (RLS) policies as needed")
+    print("2. Test the connection: python3 test_supabase.py")
+    print("3. Insert sample data: python3 test_data_insert.py")
+    print()
+    print("=" * 60)
+
+if __name__ == "__main__":
+    print_setup_instructions()

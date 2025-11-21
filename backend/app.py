@@ -1,0 +1,87 @@
+from flask import Flask
+from flask_cors import CORS
+from flask_jwt_extended import JWTManager
+import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
+def create_app():
+    app = Flask(__name__)
+    
+    # Determine allowed origins based on environment
+    flask_env = os.getenv('FLASK_ENV', 'development')
+    
+    if flask_env == 'production':
+        # Production origins - Update these with your actual deployment URLs
+        allowed_origins = [
+            "https://gtu-exam-prep.vercel.app",  # Update with your Vercel domain
+            "https://*.vercel.app",  # Allow all Vercel preview deployments
+        ]
+    else:
+        # Development origins
+        allowed_origins = [
+            "http://localhost:3000",
+            "http://localhost:3001", 
+            "http://localhost:3002",
+            "http://127.0.0.1:3000",
+            "http://127.0.0.1:3001", 
+            "http://127.0.0.1:3002"
+        ]
+    
+    # Configure CORS to allow requests from frontend
+    CORS(app, resources={
+        r"/api/*": {
+            "origins": allowed_origins,
+            "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+            "allow_headers": ["Content-Type", "Authorization"]
+        },
+        r"/auth/*": {
+            "origins": allowed_origins,
+            "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+            "allow_headers": ["Content-Type", "Authorization"]
+        }
+    })
+
+    
+    # Load configuration
+    app.config.from_object('backend.config.Config')
+    
+    # Initialize JWT Manager
+    jwt = JWTManager(app)
+    
+    # Import voice API to register routes
+    from backend import voice_api
+    
+    # Register blueprints
+    from backend.api import api_bp
+    from backend.auth import auth_bp
+    
+    app.register_blueprint(api_bp, url_prefix='/api')
+    app.register_blueprint(auth_bp, url_prefix='/auth')
+    
+    # PDF serving endpoint for local development
+    @app.route('/api/pdf/<path:filename>')
+    def serve_pdf(filename):
+        """Serve PDF files from /tmp/ directory"""
+        from flask import send_file
+        import os
+        try:
+            pdf_path = f"/tmp/{filename}"
+            if os.path.exists(pdf_path):
+                return send_file(pdf_path, mimetype='application/pdf')
+            else:
+                return {"error": "PDF not found"}, 404
+        except Exception as e:
+            return {"error": str(e)}, 500
+    
+    @app.route('/')
+    def hello():
+        return {'message': 'GTU Exam Preparation API'}
+    
+    return app
+
+if __name__ == '__main__':
+    app = create_app()
+    app.run(debug=True)

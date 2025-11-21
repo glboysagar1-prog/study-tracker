@@ -1,0 +1,194 @@
+"""
+Syllabus-Based AI PDF Generator
+Generates detailed study guides based on official GTU syllabus topics
+"""
+import os
+import re
+import time
+from bytez import Bytez
+from fpdf import FPDF
+from supabase import create_client
+from dotenv import load_dotenv
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+load_dotenv()
+
+BYTEZ_API_KEY = os.getenv("BYTEZ_API_KEY")
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+
+sdk = Bytez(BYTEZ_API_KEY)
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+class SyllabusPDF(FPDF):
+    def __init__(self, subject_name, subject_code):
+        super().__init__()
+        self.subject_name = subject_name
+        self.subject_code = subject_code
+    
+    def header(self):
+        self.set_font('Arial', 'B', 16)
+        self.set_text_color(0, 51, 102)
+        self.cell(0, 10, f"{self.subject_name} ({self.subject_code})", 0, 1, 'C')
+        self.set_font('Arial', 'I', 10)
+        self.set_text_color(100, 100, 100)
+        self.cell(0, 5, "Syllabus-Based Study Guide", 0, 1, 'C')
+        self.ln(10)
+    
+    def footer(self):
+        self.set_y(-15)
+        self.set_font('Arial', 'I', 8)
+        self.set_text_color(128, 128, 128)
+        self.cell(0, 10, f'Page {self.page_no()}', 0, 0, 'C')
+
+    def add_unit_header(self, unit_num):
+        self.add_page()
+        self.set_font('Arial', 'B', 18)
+        self.set_fill_color(230, 240, 255)
+        self.set_text_color(0, 0, 0)
+        self.cell(0, 15, f"Unit {unit_num}", 0, 1, 'L', True)
+        self.ln(5)
+
+    def add_topic_content(self, topic, content):
+        # Topic Header
+        self.ln(5)
+        self.set_font('Arial', 'B', 14)
+        self.set_text_color(0, 102, 204)
+        self.cell(0, 10, topic, 0, 1, 'L')
+        
+        # Content
+        self.set_font('Arial', '', 12)  # Increased font size
+        self.set_text_color(0, 0, 0)
+        
+        # Clean content
+        clean_content = re.sub(r'[^\x00-\x7F]+', ' ', content)
+        clean_content = re.sub(r'\s+', ' ', clean_content)
+        
+        # Add content with better line height (h=7)
+        self.multi_cell(0, 7, clean_content)
+        self.ln(8)  # Extra space after topic
+
+def generate_explanation(topic, subject_name):
+    """Generate detailed explanation for a syllabus topic"""
+    model = sdk.model("openai/gpt-4o")
+    
+    prompt = f"""
+    Explain the topic '{topic}' for the subject '{subject_name}' in detail as per GTU syllabus.
+    Include:
+    1. Definition/Concept
+    2. Key features or characteristics
+    3. Example or Diagram description (if applicable)
+    4. Real-world application
+    
+    Keep it academic and suitable for exam preparation.
+    """
+    
+    messages = [{"role": "user", "content": prompt}]
+    
+    try:
+        logger.info(f"  🤖 Generating explanation for: {topic}")
+        response = model.run(messages)
+        
+        if response.error:
+            logger.error(f"  ✗ Error: {response.error}")
+            return None
+            
+        # Handle response format
+        output = response.output
+        if isinstance(output, dict):
+            if 'content' in output: output = output['content']
+            elif 'text' in output: output = output['text']
+            else: output = str(output)
+            
+        return output
+        
+    except Exception as e:
+        logger.error(f"  ✗ Exception: {e}")
+        return None
+
+def generate_syllabus_pdf(subject_code):
+    """Generate PDF for a subject based on syllabus topics in DB"""
+    
+    # 1. Fetch syllabus topics
+    logger.info(f"Fetching syllabus for {subject_code}...")
+    response = supabase.table('syllabus_content')\
+        .select('*')\
+        .eq('subject_code', subject_code)\
+        .order('unit')\
+        .execute()
+        
+    topics = response.data
+    if not topics:
+        logger.error("No syllabus topics found!")
+        return
+        
+    # Group by unit
+    units = {}
+    subject_name = "Subject" # Default
+    
+    # Fetch subject name
+    sub_res = supabase.table('subjects').select('subject_name').eq('subject_code', subject_code).execute()
+    if sub_res.data:
+        subject_name = sub_res.data[0]['subject_name']
+        
+    for item in topics:
+        unit = item['unit']
+        if unit not in units:
+            units[unit] = []
+        units[unit].append(item['topic'])
+        
+    # 2. Generate PDF
+    pdf = SyllabusPDF(subject_name, subject_code)
+    pdf.set_auto_page_break(auto=True, margin=15)
+    
+    # Cover Page
+    pdf.add_page()
+    pdf.set_font('Arial', 'B', 24)
+    pdf.ln(60)
+    pdf.cell(0, 15, subject_name, 0, 1, 'C')
+    pdf.set_font('Arial', '', 16)
+    pdf.cell(0, 10, f"Subject Code: {subject_code}", 0, 1, 'C')
+    pdf.ln(20)
+    pdf.set_font('Arial', 'I', 12)
+    pdf.cell(0, 10, "Comprehensive Syllabus-Based Study Guide", 0, 1, 'C')
+    pdf.cell(0, 10, "Generated by AI", 0, 1, 'C')
+    
+    # Process Units
+    for unit_num in sorted(units.keys()):
+        logger.info(f"\nProcessing Unit {unit_num}...")
+        pdf.add_unit_header(unit_num)
+        
+        for topic in units[unit_num]:
+            content = generate_explanation(topic, subject_name)
+            if content:
+                pdf.add_topic_content(topic, content)
+            time.sleep(1) # Rate limiting
+            
+    # Save PDF
+    filename = f"/tmp/{subject_code}_Syllabus_Guide.pdf"
+    pdf.output(filename)
+    logger.info(f"\n✅ PDF Generated: {filename}")
+    
+    # Store in DB
+    note_data = {
+        "subject_code": subject_code,
+        "title": f"{subject_name} - Syllabus Guide (AI)",
+        "description": "Detailed explanations for all syllabus topics",
+        "file_url": f"http://localhost:5004/api/pdf/{os.path.basename(filename)}",
+        "source_name": "AI Generator",
+        "source_url": "https://www.gtu.ac.in/Syllabus.aspx",
+        "unit": 1
+    }
+    
+    try:
+        supabase.table("notes").insert(note_data).execute()
+        logger.info("✓ Saved to database")
+    except Exception as e:
+        logger.error(f"Database error: {e}")
+
+if __name__ == "__main__":
+    # Generate for Data Structures
+    generate_syllabus_pdf("2140701")

@@ -1,0 +1,16 @@
+Flask==3.0.0
+flask-cors==4.0.0
+supabase==2.4.5
+requests==2.31.0
+openai==1.14.0
+python-dotenv==1.0.0
+gunicorn==21.2.0
+bcrypt==4.1.2
+Flask-JWT-Extended==4.5.3
+fastapi==0.109.0
+uvicorn==0.27.0
+bytez==0.1.0
+fpdf==1.7.2
+apscheduler==3.10.4
+youtube-transcript-api==0.6.2
+beautifulsoup4==4.12.2
