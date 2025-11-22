@@ -2,7 +2,15 @@ import os
 import json
 import time
 from datetime import datetime
-from bytez import Bytez
+
+# Try to import Bytez, but make it optional
+try:
+    from bytez import Bytez
+    BYTEZ_AVAILABLE = True
+except ImportError:
+    BYTEZ_AVAILABLE = False
+    Bytez = None
+
 from fpdf import FPDF
 from supabase import create_client, Client
 from dotenv import load_dotenv
@@ -25,9 +33,13 @@ class EnhancedGTUAgent:
     """
     
     def __init__(self, bytez_key, supabase_url=None, supabase_key=None):
-        # Initialize Bytez
-        self.sdk = Bytez(bytez_key)
-        self.llm = self.sdk.model("openai/gpt-4o")
+        # Initialize Bytez if available
+        self.sdk = None
+        self.llm = None
+        
+        if BYTEZ_AVAILABLE and Bytez and bytez_key:
+            self.sdk = Bytez(bytez_key)
+            self.llm = self.sdk.model("openai/gpt-4o")
         
         # Initialize Supabase
         if supabase_url and supabase_key:
