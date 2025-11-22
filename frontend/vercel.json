@@ -1,33 +1,16 @@
 {
-    "version": 2,
-    "builds": [
-        {
-            "src": "package.json",
-            "use": "@vercel/static-build",
-            "config": {
-                "distDir": "dist"
-            }
-        }
-    ],
     "rewrites": [
         {
             "source": "/api/(.*)",
-            "destination": "https://gtu-backend-api.onrender.com/api/$1"
+            "destination": "https://gtu-exam-prep.onrender.com/api/$1"
         },
         {
             "source": "/agent/(.*)",
-            "destination": "https://gtu-ai-agent.onrender.com/$1"
-        }
-    ],
-    "routes": [
+            "destination": "https://gtu-ai-agent.onrender.com/agent/$1"
+        },
         {
-            "src": "/[^.]+",
-            "dest": "/",
-            "status": 200
+            "source": "/(.*)",
+            "destination": "/index.html"
         }
-    ],
-    "env": {
-        "VITE_API_URL": "https://gtu-backend-api.onrender.com",
-        "VITE_AGENT_URL": "https://gtu-ai-agent.onrender.com"
-    }
+    ]
 }
