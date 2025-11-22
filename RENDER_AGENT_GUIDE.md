@@ -33,13 +33,13 @@ Fill in EXACTLY as shown:
 │   pip install -r requirements.txt               │
 ├─────────────────────────────────────────────────┤
 │ Start Command:                                  │
-│   uvicorn agent:app --host 0.0.0.0 --port $PORT │
+│   uvicorn backend.agent_service:app --host 0.0.0.0 --port $PORT │
 └─────────────────────────────────────────────────┘
 ```
 
 **IMPORTANT**: Copy this EXACT start command:
 ```bash
-uvicorn agent:app --host 0.0.0.0 --port $PORT
+uvicorn backend.agent_service:app --host 0.0.0.0 --port $PORT
 ```
 
 ### 5. Choose Plan
@@ -86,7 +86,7 @@ curl https://gtu-ai-agent.onrender.com/health
 ## ✅ Checklist
 - [ ] Created second web service
 - [ ] Set name: `gtu-ai-agent`
-- [ ] Set start command: `uvicorn agent:app --host 0.0.0.0 --port $PORT`
+- [ ] Set start command: `uvicorn backend.agent_service:app --host 0.0.0.0 --port $PORT`
 - [ ] Added all 3 environment variables (including BYTEZ_API_KEY)
 - [ ] Deployment successful
 - [ ] Copied AI agent URL
