@@ -46,7 +46,8 @@ def create_app():
 
     
     # Load configuration
-    app.config.from_object('backend.config.Config')
+    from .config import Config
+    app.config.from_object(Config)
     
     # Initialize JWT Manager
     jwt = JWTManager(app)

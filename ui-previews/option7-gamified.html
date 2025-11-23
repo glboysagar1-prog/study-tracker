@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Option 7: Gamified Learning UI - GTU Exam Prep</title>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Nunito', sans-serif;
+            background: #f0f4f8;
+            color: #2d3748;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        /* Header */
+        .header {
+            background: white;
+            border-radius: 20px;
+            padding: 24px 32px;
+            margin-bottom: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: 900;
+            background: linear-gradient(135deg, #ff6b6b, #feca57);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .user-level {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .level-badge {
+            background: linear-gradient(135deg, #ff6b6b, #feca57);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 800;
+        }
+
+        .xp-bar-container {
+            width: 200px;
+        }
+
+        .xp-bar-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        .xp-bar {
+            height: 8px;
+            background: #e2e8f0;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .xp-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff6b6b, #feca57);
+            width: 75%;
+            border-radius: 10px;
+        }
+
+        /* Stats Cards */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+
+        .stat-box {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-box::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+        }
+
+        .stat-box.blue::before {
+            background: linear-gradient(90deg, #4299e1, #667eea);
+        }
+
+        .stat-box.green::before {
+            background: linear-gradient(90deg, #48bb78, #38b2ac);
+        }
+
+        .stat-box.orange::before {
+            background: linear-gradient(90deg, #ed8936, #f6ad55);
+        }
+
+        .stat-box.red::before {
+            background: linear-gradient(90deg, #f56565, #fc8181);
+        }
+
+        .stat-emoji {
+            font-size: 32px;
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: 900;
+            color: #2d3748;
+            margin-bottom: 4px;
+        }
+
+        .stat-label {
+            font-size: 13px;
+            color: #718096;
+            font-weight: 700;
+        }
+
+        /* Main Grid */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 24px;
+        }
+
+        /* Subject Cards */
+        .subjects-section {
+            background: white;
+            border-radius: 20px;
+            padding: 28px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        }
+
+        .section-title {
+            font-size: 20px;
+            font-weight: 900;
+            margin-bottom: 20px;
+            color: #2d3748;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .subject-card {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 16px;
+            color: white;
+            cursor: pointer;
+            transition: transform 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .subject-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 200px;
+            height: 200px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+        }
+
+        .subject-card:hover {
+            transform: scale(1.02);
+        }
+
+        .subject-card.green {
+            background: linear-gradient(135deg, #48bb78, #38b2ac);
+        }
+
+        .subject-card.orange {
+            background: linear-gradient(135deg, #ed8936, #f6ad55);
+        }
+
+        .subject-card.purple {
+            background: linear-gradient(135deg, #805ad5, #b794f4);
+        }
+
+        .subject-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+            position: relative;
+        }
+
+        .subject-info h3 {
+            font-size: 20px;
+            font-weight: 800;
+            margin-bottom: 4px;
+        }
+
+        .subject-info p {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+
+        .subject-score {
+            text-align: right;
+        }
+
+        .score-circle {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .score-value {
+            font-size: 20px;
+            font-weight: 900;
+        }
+
+        .score-label {
+            font-size: 10px;
+            opacity: 0.9;
+        }
+
+        .subject-progress {
+            margin-bottom: 12px;
+        }
+
+        .progress-text {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .progress-track {
+            height: 8px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: white;
+            border-radius: 10px;
+        }
+
+        .subject-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .action-btn {
+            padding: 8px 16px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: 700;
+            color: white;
+            cursor: pointer;
+            transition: all 0.2s;
+            backdrop-filter: blur(10px);
+        }
+
+        .action-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        /* Sidebar */
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .streak-card {
+            background: linear-gradient(135deg, #ff6b6b, #feca57);
+            border-radius: 20px;
+            padding: 28px;
+            color: white;
+            text-align: center;
+            box-shadow: 0 8px 16px rgba(255, 107, 107, 0.3);
+        }
+
+        .streak-emoji {
+            font-size: 64px;
+            margin-bottom: 12px;
+        }
+
+        .streak-value {
+            font-size: 48px;
+            font-weight: 900;
+            margin-bottom: 4px;
+        }
+
+        .streak-label {
+            font-size: 16px;
+            font-weight: 700;
+            opacity: 0.95;
+        }
+
+        .streak-message {
+            margin-top: 12px;
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .achievements-card {
+            background: white;
+            border-radius: 20px;
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        }
+
+        .achievement-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background: #f7fafc;
+            border-radius: 12px;
+            margin-bottom: 12px;
+        }
+
+        .achievement-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+
+        .achievement-icon.gold {
+            background: linear-gradient(135deg, #feca57, #ff9ff3);
+        }
+
+        .achievement-icon.silver {
+            background: linear-gradient(135deg, #a0aec0, #cbd5e0);
+        }
+
+        .achievement-info h4 {
+            font-size: 14px;
+            font-weight: 800;
+            margin-bottom: 2px;
+            color: #2d3748;
+        }
+
+        .achievement-info p {
+            font-size: 11px;
+            color: #718096;
+        }
+
+        .tools-card {
+            background: white;
+            border-radius: 20px;
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        }
+
+        .tool-btn {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px;
+            background: #f7fafc;
+            border-radius: 12px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+
+        .tool-btn:hover {
+            background: #edf2f7;
+            transform: translateX(4px);
+            border-color: #667eea;
+        }
+
+        .tool-icon {
+            font-size: 24px;
+        }
+
+        .tool-name {
+            font-weight: 800;
+            font-size: 14px;
+            color: #2d3748;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="logo">🎮 GTU EXAM PREP</div>
+            <div class="user-level">
+                <div class="level-badge">Level 12</div>
+                <div class="xp-bar-container">
+                    <div class="xp-bar-header">
+                        <span>2,850 XP</span>
+                        <span>3,500 XP</span>
+                    </div>
+                    <div class="xp-bar">
+                        <div class="xp-fill"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats Row -->
+        <div class="stats-row">
+            <div class="stat-box blue">
+                <div class="stat-emoji">📚</div>
+                <div class="stat-value">42</div>
+                <div class="stat-label">Topics Mastered</div>
+            </div>
+            <div class="stat-box green">
+                <div class="stat-emoji">✅</div>
+                <div class="stat-value">12</div>
+                <div class="stat-label">Tests Passed</div>
+            </div>
+            <div class="stat-box orange">
+                <div class="stat-emoji">🃏</div>
+                <div class="stat-value">240</div>
+                <div class="stat-label">Cards Reviewed</div>
+            </div>
+            <div class="stat-box red">
+                <div class="stat-emoji">🏆</div>
+                <div class="stat-value">18</div>
+                <div class="stat-label">Achievements</div>
+            </div>
+        </div>
+
+        <!-- Main Grid -->
+        <div class="main-grid">
+            <!-- Subjects Section -->
+            <div class="subjects-section">
+                <h2 class="section-title">🎯 Your Learning Journey</h2>
+
+                <div class="subject-card">
+                    <div class="subject-top">
+                        <div class="subject-info">
+                            <h3>Operating System</h3>
+                            <p>CS-401 • Semester 4</p>
+                        </div>
+                        <div class="subject-score">
+                            <div class="score-circle">
+                                <div class="score-value">70%</div>
+                                <div class="score-label">Progress</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="subject-progress">
+                        <div class="progress-text">
+                            <span>28/40 Topics</span>
+                            <span>+150 XP available</span>
+                        </div>
+                        <div class="progress-track">
+                            <div class="progress-fill" style="width: 70%;"></div>
+                        </div>
+                    </div>
+                    <div class="subject-actions">
+                        <button class="action-btn">📖 Continue Learning</button>
+                        <button class="action-btn">📝 Take Test</button>
+                        <button class="action-btn">🃏 Flashcards</button>
+                    </div>
+                </div>
+
+                <div class="subject-card green">
+                    <div class="subject-top">
+                        <div class="subject-info">
+                            <h3>Database Management</h3>
+                            <p>CS-402 • Semester 4</p>
+                        </div>
+                        <div class="subject-score">
+                            <div class="score-circle">
+                                <div class="score-value">55%</div>
+                                <div class="score-label">Progress</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="subject-progress">
+                        <div class="progress-text">
+                            <span>22/40 Topics</span>
+                            <span>+200 XP available</span>
+                        </div>
+                        <div class="progress-track">
+                            <div class="progress-fill" style="width: 55%;"></div>
+                        </div>
+                    </div>
+                    <div class="subject-actions">
+                        <button class="action-btn">📖 Continue Learning</button>
+                        <button class="action-btn">📝 Take Test</button>
+                        <button class="action-btn">🃏 Flashcards</button>
+                    </div>
+                </div>
+
+                <div class="subject-card orange">
+                    <div class="subject-top">
+                        <div class="subject-info">
+                            <h3>Data Structures</h3>
+                            <p>CS-403 • Semester 4</p>
+                        </div>
+                        <div class="subject-score">
+                            <div class="score-circle">
+                                <div class="score-value">85%</div>
+                                <div class="score-label">Progress</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="subject-progress">
+                        <div class="progress-text">
+                            <span>34/40 Topics</span>
+                            <span>+75 XP available</span>
+                        </div>
+                        <div class="progress-track">
+                            <div class="progress-fill" style="width: 85%;"></div>
+                        </div>
+                    </div>
+                    <div class="subject-actions">
+                        <button class="action-btn">📖 Continue Learning</button>
+                        <button class="action-btn">📝 Take Test</button>
+                        <button class="action-btn">🃏 Flashcards</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar -->
+            <div class="sidebar">
+                <!-- Streak Card -->
+                <div class="streak-card">
+                    <div class="streak-emoji">🔥</div>
+                    <div class="streak-value">7</div>
+                    <div class="streak-label">Day Streak!</div>
+                    <div class="streak-message">Amazing! Keep it going!</div>
+                </div>
+
+                <!-- Achievements -->
+                <div class="achievements-card">
+                    <h3 class="section-title">🏆 Recent Achievements</h3>
+                    <div class="achievement-item">
+                        <div class="achievement-icon gold">🌟</div>
+                        <div class="achievement-info">
+                            <h4>First Streak!</h4>
+                            <p>Studied for 7 days straight</p>
+                        </div>
+                    </div>
+                    <div class="achievement-item">
+                        <div class="achievement-icon">💯</div>
+                        <div class="achievement-info">
+                            <h4>Perfect Score</h4>
+                            <p>Aced Data Structures test</p>
+                        </div>
+                    </div>
+                    <div class="achievement-item">
+                        <div class="achievement-icon silver">⚡</div>
+                        <div class="achievement-info">
+                            <h4>Quick Learner</h4>
+                            <p>Completed 10 topics in a day</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Tools -->
+                <div class="tools-card">
+                    <h3 class="section-title">⚡ Quick Tools</h3>
+                    <div class="tool-btn">
+                        <div class="tool-icon">🤖</div>
+                        <div class="tool-name">AI Assistant</div>
+                    </div>
+                    <div class="tool-btn">
+                        <div class="tool-icon">📄</div>
+                        <div class="tool-name">Previous Papers</div>
+                    </div>
+                    <div class="tool-btn">
+                        <div class="tool-icon">⭐</div>
+                        <div class="tool-name">Important Questions</div>
+                    </div>
+                    <div class="tool-btn">
+                        <div class="tool-icon">🎥</div>
+                        <div class="tool-name">Video Tutorials</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

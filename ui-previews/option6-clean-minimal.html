@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Option 6: Clean Minimal UI - GTU Exam Prep</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: #fafafa;
+            color: #1a1a1a;
+        }
+
+        /* Top Navigation */
+        .top-nav {
+            background: white;
+            border-bottom: 1px solid #ececec;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .top-nav-content {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 0 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 72px;
+        }
+
+        .logo {
+            font-size: 22px;
+            font-weight: 800;
+            color: #0066ff;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .nav-center {
+            display: flex;
+            gap: 32px;
+        }
+
+        .nav-link {
+            color: #666;
+            font-weight: 600;
+            font-size: 15px;
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .nav-link:hover,
+        .nav-link.active {
+            color: #0066ff;
+        }
+
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .search-box {
+            background: #f5f5f5;
+            border: none;
+            border-radius: 24px;
+            padding: 10px 20px;
+            width: 280px;
+            font-size: 14px;
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #0066ff, #00d4ff);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 15px;
+        }
+
+        /* Main Layout */
+        .main-container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 40px;
+        }
+
+        .hero-banner {
+            background: linear-gradient(135deg, #0066ff, #00d4ff);
+            border-radius: 24px;
+            padding: 48px;
+            color: white;
+            margin-bottom: 40px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-banner::before {
+            content: '';
+            position: absolute;
+            width: 400px;
+            height: 400px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            top: -200px;
+            right: -100px;
+        }
+
+        .hero-title {
+            font-size: 36px;
+            font-weight: 800;
+            margin-bottom: 12px;
+        }
+
+        .hero-subtitle {
+            font-size: 18px;
+            opacity: 0.95;
+        }
+
+        /* Stats Bar */
+        .stats-bar {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .stat-item {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            text-align: center;
+            border: 1px solid #ececec;
+        }
+
+        .stat-number {
+            font-size: 32px;
+            font-weight: 800;
+            color: #0066ff;
+            margin-bottom: 8px;
+        }
+
+        .stat-text {
+            font-size: 13px;
+            color: #666;
+            font-weight: 600;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 24px;
+            margin-bottom: 32px;
+            border-bottom: 2px solid #ececec;
+        }
+
+        .tab {
+            padding: 12px 0;
+            font-size: 15px;
+            font-weight: 700;
+            color: #666;
+            cursor: pointer;
+            position: relative;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -2px;
+        }
+
+        .tab.active {
+            color: #0066ff;
+            border-bottom-color: #0066ff;
+        }
+
+        /* Subject Grid */
+        .subject-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+        }
+
+        .subject-box {
+            background: white;
+            border: 1px solid #ececec;
+            border-radius: 16px;
+            padding: 28px;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .subject-box:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08);
+            border-color: #0066ff;
+        }
+
+        .subject-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 20px;
+        }
+
+        .subject-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 14px;
+            background: #f0f6ff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+        }
+
+        .subject-badge {
+            background: #f0f6ff;
+            color: #0066ff;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 800;
+        }
+
+        .subject-name {
+            font-size: 20px;
+            font-weight: 800;
+            color: #1a1a1a;
+            margin-bottom: 6px;
+        }
+
+        .subject-code {
+            font-size: 13px;
+            color: #999;
+            margin-bottom: 20px;
+        }
+
+        .progress-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .progress-track {
+            height: 6px;
+            background: #f0f0f0;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #0066ff, #00d4ff);
+            border-radius: 10px;
+        }
+
+        .subject-footer {
+            display: flex;
+            gap: 16px;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #ececec;
+        }
+
+        .subject-stat {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            color: #666;
+        }
+
+        /* Tools Section */
+        .tools-section {
+            margin-top: 48px;
+        }
+
+        .section-title {
+            font-size: 24px;
+            font-weight: 800;
+            margin-bottom: 24px;
+            color: #1a1a1a;
+        }
+
+        .tools-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+        }
+
+        .tool-card {
+            background: white;
+            border: 1px solid #ececec;
+            border-radius: 16px;
+            padding: 24px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .tool-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08);
+        }
+
+        .tool-icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+        }
+
+        .tool-name {
+            font-size: 16px;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin-bottom: 6px;
+        }
+
+        .tool-desc {
+            font-size: 13px;
+            color: #666;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Top Navigation -->
+    <nav class="top-nav">
+        <div class="top-nav-content">
+            <div class="logo">
+                <span>📚</span>
+                <span>GTU Exam Prep</span>
+            </div>
+            <div class="nav-center">
+                <a href="#" class="nav-link active">Dashboard</a>
+                <a href="#" class="nav-link">My Subjects</a>
+                <a href="#" class="nav-link">Resources</a>
+                <a href="#" class="nav-link">Progress</a>
+            </div>
+            <div class="nav-right">
+                <input type="text" class="search-box" placeholder="Search anything...">
+                <div class="avatar">S</div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <div class="main-container">
+        <!-- Hero Banner -->
+        <div class="hero-banner">
+            <h1 class="hero-title">Ready to ace your exams? 🚀</h1>
+            <p class="hero-subtitle">You're on a 7-day streak! Keep it up and reach your goals.</p>
+        </div>
+
+        <!-- Stats Bar -->
+        <div class="stats-bar">
+            <div class="stat-item">
+                <div class="stat-number">42</div>
+                <div class="stat-text">Topics Completed</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">2,850</div>
+                <div class="stat-text">XP Points</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">12</div>
+                <div class="stat-text">Tests Done</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">85%</div>
+                <div class="stat-text">Avg Score</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-number">7</div>
+                <div class="stat-text">Day Streak</div>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <div class="tab active">All Subjects</div>
+            <div class="tab">In Progress</div>
+            <div class="tab">Completed</div>
+        </div>
+
+        <!-- Subject Grid -->
+        <div class="subject-grid">
+            <div class="subject-box">
+                <div class="subject-header">
+                    <div class="subject-icon">💻</div>
+                    <div class="subject-badge">SEM 4</div>
+                </div>
+                <div class="subject-name">Operating System</div>
+                <div class="subject-code">CS-401</div>
+                <div class="progress-info">
+                    <span style="color: #0066ff;">70% Complete</span>
+                    <span style="color: #999;">28/40 Topics</span>
+                </div>
+                <div class="progress-track">
+                    <div class="progress-bar" style="width: 70%;"></div>
+                </div>
+                <div class="subject-footer">
+                    <div class="subject-stat">
+                        <span>📝</span>
+                        <span>5 Tests</span>
+                    </div>
+                    <div class="subject-stat">
+                        <span>🃏</span>
+                        <span>40 Cards</span>
+                    </div>
+                    <div class="subject-stat">
+                        <span>📄</span>
+                        <span>12 Notes</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="subject-box">
+                <div class="subject-header">
+                    <div class="subject-icon">🗄️</div>
+                    <div class="subject-badge">SEM 4</div>
+                </div>
+                <div class="subject-name">Database Management</div>
+                <div class="subject-code">CS-402</div>
+                <div class="progress-info">
+                    <span style="color: #0066ff;">55% Complete</span>
+                    <span style="color: #999;">22/40 Topics</span>
+                </div>
+                <div class="progress-track">
+                    <div class="progress-bar" style="width: 55%;"></div>
+                </div>
+                <div class="subject-footer">
+                    <div class="subject-stat">
+                        <span>📝</span>
+                        <span>3 Tests</span>
+                    </div>
+                    <div class="subject-stat">
+                        <span>🃏</span>
+                        <span>30 Cards</span>
+                    </div>
+                    <div class="subject-stat">
+                        <span>📄</span>
+                        <span>8 Notes</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="subject-box">
+                <div class="subject-header">
+                    <div class="subject-icon">🌳</div>
+                    <div class="subject-badge">SEM 4</div>
+                </div>
+                <div class="subject-name">Data Structures</div>
+                <div class="subject-code">CS-403</div>
+                <div class="progress-info">
+                    <span style="color: #0066ff;">85% Complete</span>
+                    <span style="color: #999;">34/40 Topics</span>
+                </div>
+                <div class="progress-track">
+                    <div class="progress-bar" style="width: 85%;"></div>
+                </div>
+                <div class="subject-footer">
+                    <div class="subject-stat">
+                        <span>📝</span>
+                        <span>8 Tests</span>
+                    </div>
+                    <div class="subject-stat">
+                        <span>🃏</span>
+                        <span>50 Cards</span>
+                    </div>
+                    <div class="subject-stat">
+                        <span>📄</span>
+                        <span>15 Notes</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="subject-box">
+                <div class="subject-header">
+                    <div class="subject-icon">🌐</div>
+                    <div class="subject-badge">SEM 4</div>
+                </div>
+                <div class="subject-name">Computer Networks</div>
+                <div class="subject-code">CS-404</div>
+                <div class="progress-info">
+                    <span style="color: #0066ff;">45% Complete</span>
+                    <span style="color: #999;">18/40 Topics</span>
+                </div>
+                <div class="progress-track">
+                    <div class="progress-bar" style="width: 45%;"></div>
+                </div>
+                <div class="subject-footer">
+                    <div class="subject-stat">
+                        <span>📝</span>
+                        <span>2 Tests</span>
+                    </div>
+                    <div class="subject-stat">
+                        <span>🃏</span>
+                        <span>25 Cards</span>
+                    </div>
+                    <div class="subject-stat">
+                        <span>📄</span>
+                        <span>6 Notes</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="subject-box">
+                <div class="subject-header">
+                    <div class="subject-icon">🐍</div>
+                    <div class="subject-badge">SEM 4</div>
+                </div>
+                <div class="subject-name">Python Programming</div>
+                <div class="subject-code">CS-405</div>
+                <div class="progress-info">
+                    <span style="color: #0066ff;">92% Complete</span>
+                    <span style="color: #999;">37/40 Topics</span>
+                </div>
+                <div class="progress-track">
+                    <div class="progress-bar" style="width: 92%;"></div>
+                </div>
+                <div class="subject-footer">
+                    <div class="subject-stat">
+                        <span>📝</span>
+                        <span>10 Tests</span>
+                    </div>
+                    <div class="subject-stat">
+                        <span>🃏</span>
+                        <span>60 Cards</span>
+                    </div>
+                    <div class="subject-stat">
+                        <span>📄</span>
+                        <span>20 Notes</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="subject-box">
+                <div class="subject-header">
+                    <div class="subject-icon">📐</div>
+                    <div class="subject-badge">SEM 4</div>
+                </div>
+                <div class="subject-name">Mathematics - IV</div>
+                <div class="subject-code">MA-401</div>
+                <div class="progress-info">
+                    <span style="color: #0066ff;">60% Complete</span>
+                    <span style="color: #999;">24/40 Topics</span>
+                </div>
+                <div class="progress-track">
+                    <div class="progress-bar" style="width: 60%;"></div>
+                </div>
+                <div class="subject-footer">
+                    <div class="subject-stat">
+                        <span>📝</span>
+                        <span>4 Tests</span>
+                    </div>
+                    <div class="subject-stat">
+                        <span>🃏</span>
+                        <span>35 Cards</span>
+                    </div>
+                    <div class="subject-stat">
+                        <span>📄</span>
+                        <span>10 Notes</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tools Section -->
+        <div class="tools-section">
+            <h2 class="section-title">Study Tools & Resources</h2>
+            <div class="tools-grid">
+                <div class="tool-card">
+                    <div class="tool-icon">🤖</div>
+                    <div class="tool-name">AI Assistant</div>
+                    <div class="tool-desc">Get instant help with concepts</div>
+                </div>
+                <div class="tool-card">
+                    <div class="tool-icon">🃏</div>
+                    <div class="tool-name">Flashcards</div>
+                    <div class="tool-desc">120+ interactive cards</div>
+                </div>
+                <div class="tool-card">
+                    <div class="tool-icon">📝</div>
+                    <div class="tool-name">Mock Tests</div>
+                    <div class="tool-desc">GTU pattern exams</div>
+                </div>
+                <div class="tool-card">
+                    <div class="tool-icon">⭐</div>
+                    <div class="tool-name">Important Qs</div>
+                    <div class="tool-desc">200+ curated questions</div>
+                </div>
+                <div class="tool-card">
+                    <div class="tool-icon">📄</div>
+                    <div class="tool-name">Previous Papers</div>
+                    <div class="tool-desc">Past year solutions</div>
+                </div>
+                <div class="tool-card">
+                    <div class="tool-icon">📚</div>
+                    <div class="tool-name">Syllabus</div>
+                    <div class="tool-desc">Complete curriculum</div>
+                </div>
+                <div class="tool-card">
+                    <div class="tool-icon">💻</div>
+                    <div class="tool-name">Lab Programs</div>
+                    <div class="tool-desc">Practical code examples</div>
+                </div>
+                <div class="tool-card">
+                    <div class="tool-icon">🎥</div>
+                    <div class="tool-name">Video Lessons</div>
+                    <div class="tool-desc">50+ hours content</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

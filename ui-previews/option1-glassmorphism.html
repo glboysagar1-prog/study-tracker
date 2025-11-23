@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Option 1: Glassmorphism UI - GTU Exam Prep</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            min-height: 100vh;
+            color: white;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: absolute;
+            width: 300px;
+            height: 300px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            top: -100px;
+            right: -100px;
+            filter: blur(80px);
+        }
+
+        body::after {
+            content: '';
+            position: absolute;
+            width: 400px;
+            height: 400px;
+            background: rgba(102, 126, 234, 0.3);
+            border-radius: 50%;
+            bottom: -150px;
+            left: -150px;
+            filter: blur(100px);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Navbar */
+        .navbar {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #fff, #a8edea);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .search-bar {
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 10px 20px;
+            width: 400px;
+            color: white;
+            outline: none;
+        }
+
+        .search-bar::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .user-profile {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            cursor: pointer;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+
+        /* Main Content */
+        .main-content {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            gap: 30px;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            padding: 25px;
+            height: fit-content;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .menu-item {
+            padding: 15px 20px;
+            margin-bottom: 10px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .menu-item:hover, .menu-item.active {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .menu-icon {
+            font-size: 20px;
+        }
+
+        /* Dashboard Content */
+        .dashboard {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-value {
+            font-size: 36px;
+            font-weight: 700;
+            margin: 10px 0;
+            background: linear-gradient(135deg, #fff, #a8edea);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            opacity: 0.8;
+        }
+
+        /* Subject Cards */
+        .subjects-section {
+            margin-top: 20px;
+        }
+
+        .section-title {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+
+        .subjects-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .subject-card {
+            background: rgba(255, 255, 255, 0.12);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .subject-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, #a8edea, #fed6e3);
+        }
+
+        .subject-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        .subject-name {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .subject-code {
+            font-size: 13px;
+            opacity: 0.7;
+            margin-bottom: 15px;
+        }
+
+        .progress-bar {
+            background: rgba(255, 255, 255, 0.2);
+            height: 8px;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 15px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #a8edea, #fed6e3);
+            border-radius: 10px;
+            transition: width 0.5s ease;
+        }
+
+        .subject-meta {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 15px;
+            font-size: 13px;
+            opacity: 0.8;
+        }
+
+        .badge {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.25);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Navbar -->
+        <nav class="navbar">
+            <div class="logo">🎓 GTU Exam Prep</div>
+            <input type="text" class="search-bar" placeholder="Search subjects, materials, tests...">
+            <div class="user-profile">S</div>
+        </nav>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Sidebar -->
+            <aside class="sidebar">
+                <div class="menu-item active">
+                    <span class="menu-icon">📊</span>
+                    <span>Dashboard</span>
+                </div>
+                <div class="menu-item">
+                    <span class="menu-icon">📚</span>
+                    <span>Study Materials</span>
+                </div>
+                <div class="menu-item">
+                    <span class="menu-icon">📝</span>
+                    <span>Mock Tests</span>
+                </div>
+                <div class="menu-item">
+                    <span class="menu-icon">📈</span>
+                    <span>Progress</span>
+                </div>
+                <div class="menu-item">
+                    <span class="menu-icon">⭐</span>
+                    <span>Important Questions</span>
+                </div>
+                <div class="menu-item">
+                    <span class="menu-icon">💬</span>
+                    <span>AI Assistant</span>
+                </div>
+            </aside>
+
+            <!-- Dashboard -->
+            <main class="dashboard">
+                <!-- Stats Cards -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-label">Topics Completed</div>
+                        <div class="stat-value">42</div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 65%;"></div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Total XP</div>
+                        <div class="stat-value">2,850</div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 75%;"></div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Tests Completed</div>
+                        <div class="stat-value">12</div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 50%;"></div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Study Streak</div>
+                        <div class="stat-value">7 Days</div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: 90%;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Subjects Section -->
+                <div class="subjects-section">
+                    <h2 class="section-title">Your Subjects</h2>
+                    <div class="subjects-grid">
+                        <div class="subject-card">
+                            <span class="badge">Semester 4</span>
+                            <div class="subject-name">Operating System</div>
+                            <div class="subject-code">CS-401</div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: 70%;"></div>
+                            </div>
+                            <div class="subject-meta">
+                                <span>70% Complete</span>
+                                <span>28/40 Topics</span>
+                            </div>
+                        </div>
+
+                        <div class="subject-card">
+                            <span class="badge">Semester 4</span>
+                            <div class="subject-name">Database Management System</div>
+                            <div class="subject-code">CS-402</div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: 55%;"></div>
+                            </div>
+                            <div class="subject-meta">
+                                <span>55% Complete</span>
+                                <span>22/40 Topics</span>
+                            </div>
+                        </div>
+
+                        <div class="subject-card">
+                            <span class="badge">Semester 4</span>
+                            <div class="subject-name">Data Structures</div>
+                            <div class="subject-code">CS-403</div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: 85%;"></div>
+                            </div>
+                            <div class="subject-meta">
+                                <span>85% Complete</span>
+                                <span>34/40 Topics</span>
+                            </div>
+                        </div>
+
+                        <div class="subject-card">
+                            <span class="badge">Semester 4</span>
+                            <div class="subject-name">Computer Networks</div>
+                            <div class="subject-code">CS-404</div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: 45%;"></div>
+                            </div>
+                            <div class="subject-meta">
+                                <span>45% Complete</span>
+                                <span>18/40 Topics</span>
+                            </div>
+                        </div>
+
+                        <div class="subject-card">
+                            <span class="badge">Semester 4</span>
+                            <div class="subject-name">Python Programming</div>
+                            <div class="subject-code">CS-405</div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: 92%;"></div>
+                            </div>
+                            <div class="subject-meta">
+                                <span>92% Complete</span>
+                                <span>37/40 Topics</span>
+                            </div>
+                        </div>
+
+                        <div class="subject-card">
+                            <span class="badge">Semester 4</span>
+                            <div class="subject-name">Mathematics - IV</div>
+                            <div class="subject-code">MA-401</div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: 60%;"></div>
+                            </div>
+                            <div class="subject-meta">
+                                <span>60% Complete</span>
+                                <span>24/40 Topics</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+</body>
+</html>

@@ -2,7 +2,7 @@
 
 ## Prerequisites
 You need the URLs from Render:
-- Backend URL: `https://gtu-backend-api.onrender.com`
+- Backend URL: `https://gtu-exam-prep.onrender.com`
 - AI Agent URL: `https://gtu-ai-agent.onrender.com`
 
 ---
@@ -49,7 +49,7 @@ Click **"Environment Variables"** section and add:
 ┌──────────────────┬───────────────────────────────────────┐
 │ Key              │ Value                                 │
 ├──────────────────┼───────────────────────────────────────┤
-│ VITE_API_URL     │ https://gtu-backend-api.onrender.com  │
+│ VITE_API_URL     │ https://gtu-exam-prep.onrender.com    │
 ├──────────────────┼───────────────────────────────────────┤
 │ VITE_AGENT_URL   │ https://gtu-ai-agent.onrender.com     │
 └──────────────────┴───────────────────────────────────────┘
