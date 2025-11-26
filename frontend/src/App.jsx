@@ -51,7 +51,7 @@ function App() {
     <Router>
       <Routes>
         {/* Public routes without sidebar */}
-        <Route path="/" element={<Home />} />
+        <Route path="/" element={<AppLayout><Dashboard /></AppLayout>} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
 
