@@ -1,4 +1,4 @@
-export const AGENT_BASE_URL = '/agent';
+export const AGENT_BASE_URL = import.meta.env.VITE_AGENT_URL || '/agent';
 
 export const agentApi = {
     chat: async (userInput) => {
