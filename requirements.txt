@@ -13,4 +13,4 @@ bytez==0.1.0
 fpdf==1.7.2
 apscheduler==3.10.4
 youtube-transcript-api==0.6.2
-beautifulsoup4==4.12.2
+beautifulsoup4==4.12.2reportlab==4.0.9

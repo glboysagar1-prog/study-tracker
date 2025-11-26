@@ -14,55 +14,61 @@ const Syllabus = () => {
   const [importantQuestions, setImportantQuestions] = useState([]);
   const [studyMaterials, setStudyMaterials] = useState([]);
   const [showFlashcards, setShowFlashcards] = useState(false);
-  const [selectedUnit, setSelectedUnit] = useState(null);
-  const [showChat, setShowChat] = useState(false);
+  const [summaryModal, setSummaryModal] = useState({ show: false, content: '', loading: false, unit: null });
 
+  const handleSummarize = async (unitNumber) => {
+    setSummaryModal({ show: true, content: '', loading: true, unit: unitNumber });
+    try {
+      // Try N8N webhook first
+      const n8nModule = await import('../services/n8nService');
+      const result = await n8nModule.explainTopic(
+        subject.subject_code,
+        `Unit ${unitNumber}`,
+        unitNumber
+      );
 
-  useEffect(() => {
-    const fetchSubjectData = async () => {
-      try {
-        // Fetch subject details
-        const subjectResponse = await fetch(`http://localhost:5004/api/subjects/${subjectId}`);
-        const subjectData = await subjectResponse.json();
+      if (result.success && result.data) {
+        const { final_answer, answer_preview, pdfUrl } = result.data;
+        let content = final_answer || answer_preview || 'Summary generated successfully.';
 
-        if (subjectData.subject) {
-          setSubject(subjectData.subject);
-          setSubjectName(subjectData.subject.subject_name);
+        if (pdfUrl) {
+          content += `\n\n📄 Download PDF: ${pdfUrl}`;
         }
 
-        // Fetch syllabus data
-        const response = await fetch(`http://localhost:5004/api/syllabus/${subjectId}`);
-        const data = await response.json();
-
-        if (data.syllabus) {
-          setSyllabus(data.syllabus);
-        }
-
-        // Fetch important questions
-        const impResponse = await fetch(`http://localhost:5004/api/questions/important/${subjectId}`);
-        const impData = await impResponse.json();
-        if (impData.questions) {
-          setImportantQuestions(impData.questions);
-        }
-
-        // Fetch study materials
-        const matResponse = await fetch(`http://localhost:5004/api/study-materials/${subjectId}`);
-        const matData = await matResponse.json();
-        if (matData.materials) {
-          setStudyMaterials(matData.materials);
-        }
-
-        setLoading(false);
-      } catch (error) {
-        console.error('Error fetching data:', error);
-        setLoading(false);
+        setSummaryModal(prev => ({ ...prev, content, loading: false }));
+      } else {
+        // Fallback to existing backend
+        await fallbackSummarize(unitNumber);
       }
-    };
-
-    if (subjectId) {
-      fetchSubjectData();
+    } catch (error) {
+      console.error('N8N error, falling back to backend:', error);
+      await fallbackSummarize(unitNumber);
     }
-  }, [subjectId]);
+  };
+
+  const fallbackSummarize = async (unitNumber) => {
+    try {
+      const response = await fetch('http://localhost:5004/api/summarize-unit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          subject_code: subject.subject_code,
+          unit_number: unitNumber,
+        }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        setSummaryModal(prev => ({ ...prev, content: data.summary, loading: false }));
+      } else {
+        setSummaryModal(prev => ({ ...prev, content: 'Failed to generate summary.', loading: false }));
+      }
+    } catch (error) {
+      console.error('Error summarizing unit:', error);
+      setSummaryModal(prev => ({ ...prev, content: 'Error connecting to server.', loading: false }));
+    }
+  };
 
   if (loading) {
     return (
@@ -140,6 +146,15 @@ const Syllabus = () => {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                     </svg>
                     View Flashcards
+                  </button>
+                  <button
+                    onClick={() => handleSummarize(unit.unit_number)}
+                    className="bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-white px-4 py-2 rounded-md flex items-center gap-2 transition-all transform hover:scale-105"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    Summarize with AI
                   </button>
                   <button className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md flex items-center gap-2">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -266,6 +281,57 @@ const Syllabus = () => {
             subjectName={subjectName}
             onClose={() => setShowChat(false)}
           />
+        )}
+
+        {/* AI Summary Modal */}
+        {summaryModal.show && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col">
+              <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gradient-to-r from-yellow-50 to-orange-50 rounded-t-xl">
+                <div className="flex items-center gap-3">
+                  <div className="bg-orange-100 p-2 rounded-lg">
+                    <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-800">Unit {summaryModal.unit} Summary</h3>
+                </div>
+                <button
+                  onClick={() => setSummaryModal(prev => ({ ...prev, show: false }))}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="p-6 overflow-y-auto flex-grow">
+                {summaryModal.loading ? (
+                  <div className="flex flex-col items-center justify-center py-12">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mb-4"></div>
+                    <p className="text-gray-600 font-medium">AI is analyzing the unit content...</p>
+                    <p className="text-gray-400 text-sm mt-2">This may take a few seconds</p>
+                  </div>
+                ) : (
+                  <div className="prose max-w-none">
+                    <div className="whitespace-pre-wrap text-gray-700 leading-relaxed">
+                      {summaryModal.content}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="p-4 border-t border-gray-100 bg-gray-50 rounded-b-xl flex justify-end">
+                <button
+                  onClick={() => setSummaryModal(prev => ({ ...prev, show: false }))}
+                  className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>

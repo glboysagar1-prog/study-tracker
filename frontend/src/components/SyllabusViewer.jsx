@@ -7,6 +7,14 @@ const SyllabusViewer = ({ subjectCode }) => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [expandedUnits, setExpandedUnits] = useState({});
+    const [summaryModal, setSummaryModal] = useState({ show: false, content: '', loading: false, unit: null });
+
+    const toggleUnit = (unitNumber) => {
+        setExpandedUnits(prev => ({
+            ...prev,
+            [unitNumber]: !prev[unitNumber]
+        }));
+    };
 
     useEffect(() => {
         const fetchSyllabusDetails = async () => {
@@ -36,11 +44,30 @@ const SyllabusViewer = ({ subjectCode }) => {
         }
     }, [subjectCode]);
 
-    const toggleUnit = (unitId) => {
-        setExpandedUnits(prev => ({
-            ...prev,
-            [unitId]: !prev[unitId]
-        }));
+    const handleSummarize = async (e, unitNumber) => {
+        e.stopPropagation(); // Prevent toggling accordion
+        setSummaryModal({ show: true, content: '', loading: true, unit: unitNumber });
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/summarize-unit`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    subject_code: subjectCode,
+                    unit_number: unitNumber,
+                }),
+            });
+            const data = await response.json();
+            if (data.success) {
+                setSummaryModal(prev => ({ ...prev, content: data.summary, loading: false }));
+            } else {
+                setSummaryModal(prev => ({ ...prev, content: 'Failed to generate summary.', loading: false }));
+            }
+        } catch (error) {
+            console.error('Error summarizing unit:', error);
+            setSummaryModal(prev => ({ ...prev, content: 'Error connecting to server.', loading: false }));
+        }
     };
 
     if (loading) return <div className="p-8 text-center text-gray-500">Loading detailed syllabus...</div>;
@@ -59,9 +86,9 @@ const SyllabusViewer = ({ subjectCode }) => {
             {syllabusData.units.map((unit) => (
                 <div key={unit.unit} className="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden">
                     {/* Unit Header */}
-                    <button
+                    <div
                         onClick={() => toggleUnit(unit.unit)}
-                        className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 transition-colors text-left"
+                        className="w-full flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 transition-colors text-left cursor-pointer"
                     >
                         <div className="flex items-center gap-3">
                             <span className="bg-blue-600 text-white text-sm font-bold px-3 py-1 rounded-full">
@@ -69,10 +96,21 @@ const SyllabusViewer = ({ subjectCode }) => {
                             </span>
                             <h3 className="text-lg font-semibold text-gray-800">{unit.title}</h3>
                         </div>
-                        <span className={`transform transition-transform duration-200 ${expandedUnits[unit.unit] ? 'rotate-180' : ''}`}>
-                            ▼
-                        </span>
-                    </button>
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={(e) => handleSummarize(e, unit.unit)}
+                                className="bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-white px-3 py-1.5 rounded-md flex items-center gap-1.5 text-sm transition-all transform hover:scale-105 shadow-sm"
+                            >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                </svg>
+                                Summarize
+                            </button>
+                            <span className={`transform transition-transform duration-200 ${expandedUnits[unit.unit] ? 'rotate-180' : ''}`}>
+                                ▼
+                            </span>
+                        </div>
+                    </div>
 
                     {/* Unit Content */}
                     {expandedUnits[unit.unit] && (
@@ -163,6 +201,57 @@ const SyllabusViewer = ({ subjectCode }) => {
                     )}
                 </div>
             ))}
+
+            {/* AI Summary Modal */}
+            {summaryModal.show && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col">
+                        <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gradient-to-r from-yellow-50 to-orange-50 rounded-t-xl">
+                            <div className="flex items-center gap-3">
+                                <div className="bg-orange-100 p-2 rounded-lg">
+                                    <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                    </svg>
+                                </div>
+                                <h3 className="text-xl font-bold text-gray-800">Unit {summaryModal.unit} Summary</h3>
+                            </div>
+                            <button
+                                onClick={() => setSummaryModal(prev => ({ ...prev, show: false }))}
+                                className="text-gray-400 hover:text-gray-600 transition-colors"
+                            >
+                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+
+                        <div className="p-6 overflow-y-auto flex-grow">
+                            {summaryModal.loading ? (
+                                <div className="flex flex-col items-center justify-center py-12">
+                                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mb-4"></div>
+                                    <p className="text-gray-600 font-medium">AI is analyzing the unit content...</p>
+                                    <p className="text-gray-400 text-sm mt-2">This may take a few seconds</p>
+                                </div>
+                            ) : (
+                                <div className="prose max-w-none">
+                                    <div className="whitespace-pre-wrap text-gray-700 leading-relaxed">
+                                        {summaryModal.content}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="p-4 border-t border-gray-100 bg-gray-50 rounded-b-xl flex justify-end">
+                            <button
+                                onClick={() => setSummaryModal(prev => ({ ...prev, show: false }))}
+                                className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium transition-colors"
+                            >
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

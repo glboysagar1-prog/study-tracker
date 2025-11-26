@@ -387,6 +387,53 @@ def ai_assistant():
     except Exception as e:
         return jsonify({'error': f'AI response generation failed: {str(e)}'}), 500
 
+@api_bp.route('/summarize-unit', methods=['POST'])
+def summarize_unit():
+    """
+    Summarize a specific unit using AI
+    """
+    try:
+        data = request.get_json()
+        subject_code = data.get('subject_code')
+        unit_number = data.get('unit_number')
+        
+        if not subject_code or not unit_number:
+            return jsonify({'error': 'Subject code and unit number are required'}), 400
+            
+        # 1. Fetch unit content from database (notes or syllabus)
+        # Try notes first as they might have more content
+        notes_response = supabase.table("notes").select("description").eq("subject_code", subject_code).eq("unit", unit_number).execute()
+        
+        content_to_summarize = ""
+        if notes_response.data:
+            # Combine descriptions from all notes for this unit
+            content_to_summarize = "\n".join([n.get('description', '') for n in notes_response.data])
+            
+        # If no notes, try syllabus content
+        if not content_to_summarize:
+            syllabus_response = supabase.table("syllabus_content").select("topics").eq("subject_code", subject_code).eq("unit", unit_number).execute()
+            if syllabus_response.data:
+                content_to_summarize = "\n".join([s.get('topics', '') for s in syllabus_response.data])
+                
+        if not content_to_summarize:
+            # If still no content, try to fetch subject name to at least generate a generic summary based on unit title if available
+            # For now, just return error or generic prompt
+            return jsonify({'error': 'No content found for this unit to summarize'}), 404
+            
+        # 2. Generate Summary
+        prompt = f"Please provide a concise summary of the following unit content for Subject {subject_code}, Unit {unit_number}:\n\n{content_to_summarize[:2000]}"
+        context = "You are an expert academic summarizer. Create a clear, bulleted summary of the key concepts in this unit."
+        
+        summary = ai_processor.generate_response(prompt, context)
+        
+        return jsonify({
+            'success': True,
+            'summary': summary
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'error': f'Summarization failed: {str(e)}'}), 500
+
 @api_bp.route('/updates')
 def get_updates():
     """Get all GTU updates with optional filters"""

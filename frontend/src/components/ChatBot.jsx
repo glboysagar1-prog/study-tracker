@@ -7,6 +7,7 @@ const ChatBot = () => {
     ]);
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
+    const [suggestions, setSuggestions] = useState([]);
     const messagesEndRef = useRef(null);
 
     const toggleChat = () => {
@@ -28,14 +29,50 @@ const ChatBot = () => {
         setMessages(prev => [...prev, userMessage]);
         setInput('');
         setLoading(true);
+        setSuggestions([]); // Clear previous suggestions
 
+        try {
+            // Try N8N webhook first
+            const n8nModule = await import('../services/n8nService');
+            const result = await n8nModule.sendChatMessage(input, messages);
+
+            if (result.success && result.data) {
+                const { answer_preview, final_answer, next_suggestions, pdfUrl } = result.data;
+
+                // Use final_answer if available, otherwise answer_preview
+                const responseText = final_answer || answer_preview || "I received your message but couldn't generate a response.";
+
+                let displayText = responseText;
+                if (pdfUrl) {
+                    displayText += `\n\n📄 [View PDF](${pdfUrl})`;
+                }
+
+                setMessages(prev => [...prev, { text: displayText, sender: 'ai' }]);
+
+                // Set quick reply suggestions if available
+                if (next_suggestions && Array.isArray(next_suggestions)) {
+                    setSuggestions(next_suggestions);
+                }
+            } else {
+                // Fallback to existing backend
+                await fallbackToBackend(input);
+            }
+        } catch (error) {
+            console.error('N8N error, falling back to backend:', error);
+            await fallbackToBackend(input);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const fallbackToBackend = async (prompt) => {
         try {
             const response = await fetch('/api/ai-assistant', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ prompt: input }),
+                body: JSON.stringify({ prompt }),
             });
 
             const data = await response.json();
@@ -43,13 +80,12 @@ const ChatBot = () => {
             if (data.success) {
                 setMessages(prev => [...prev, { text: data.response, sender: 'ai' }]);
             } else {
-                setMessages(prev => [...prev, { text: "Sorry, I encountered an error. Please try again.", sender: 'ai' }]);
+                const errorMessage = data.error || "Sorry, I encountered an error. Please try again.";
+                setMessages(prev => [...prev, { text: errorMessage, sender: 'ai' }]);
             }
         } catch (error) {
             console.error('Error sending message:', error);
-            setMessages(prev => [...prev, { text: "Sorry, I'm having trouble connecting right now.", sender: 'ai' }]);
-        } finally {
-            setLoading(false);
+            setMessages(prev => [...prev, { text: "Sorry, I'm having trouble connecting right now. Please check your internet connection.", sender: 'ai' }]);
         }
     };
 
@@ -102,8 +138,8 @@ const ChatBot = () => {
                             >
                                 <div
                                     className={`max-w-[80%] p-3 rounded-lg text-sm ${msg.sender === 'user'
-                                            ? 'bg-blue-600 text-white rounded-br-none'
-                                            : 'bg-white text-gray-800 border border-gray-200 rounded-bl-none shadow-sm'
+                                        ? 'bg-blue-600 text-white rounded-br-none'
+                                        : 'bg-white text-gray-800 border border-gray-200 rounded-bl-none shadow-sm'
                                         }`}
                                 >
                                     {msg.text}
@@ -121,6 +157,24 @@ const ChatBot = () => {
                         )}
                         <div ref={messagesEndRef} />
                     </div>
+
+                    {/* Quick Reply Suggestions */}
+                    {suggestions.length > 0 && (
+                        <div className="px-3 py-2 bg-gray-50 border-t border-gray-200">
+                            <p className="text-xs text-gray-500 mb-2">Suggested:</p>
+                            <div className="flex flex-wrap gap-2">
+                                {suggestions.map((suggestion, idx) => (
+                                    <button
+                                        key={idx}
+                                        onClick={() => setInput(suggestion)}
+                                        className="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1 rounded-full transition-colors"
+                                    >
+                                        {suggestion}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
 
                     {/* Input */}
                     <div className="p-3 border-t border-gray-200 bg-white">

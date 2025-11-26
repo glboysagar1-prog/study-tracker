@@ -1,7 +1,3 @@
-"""
-AI-Powered PDF Generator using Bytez
-Scrapes content, uses AI to analyze and summarize, generates PDFs
-"""
 import os
 import requests
 from bs4 import BeautifulSoup
@@ -13,6 +9,8 @@ from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY
 from supabase import create_client
 from dotenv import load_dotenv
 import logging
+from urllib.parse import urljoin
+import shutil
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -25,14 +23,39 @@ BYTEZ_API_KEY = os.getenv("BYTEZ_API_KEY")
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
+def download_pdf(url, output_path):
+    """Download a PDF file from a URL"""
+    try:
+        response = requests.get(url, stream=True, timeout=30)
+        if response.status_code == 200:
+            with open(output_path, 'wb') as f:
+                response.raw.decode_content = True
+                shutil.copyfileobj(response.raw, f)
+            return True
+        return False
+    except Exception as e:
+        logger.error(f"Error downloading PDF {url}: {e}")
+        return False
+
 def scrape_content(url):
-    """Scrape content from educational website"""
+    """Scrape content or find PDF"""
     try:
         response = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'}, timeout=10)
         soup = BeautifulSoup(response.text, 'html.parser')
         
+        # 1. Check for PDF links
+        pdf_links = []
+        for a in soup.find_all('a', href=True):
+            if a['href'].lower().endswith('.pdf'):
+                pdf_links.append(urljoin(url, a['href']))
+        
+        if pdf_links:
+            # Found a PDF, return it
+            return {'type': 'pdf', 'url': pdf_links[0]}
+            
+        # 2. If no PDF, scrape text
         # Remove script and style elements
-        for script in soup(["script", "style", "nav", "footer", "header"]):
+        for script in soup(["script", "style", "nav", "footer", "header", "aside"]):
             script.decompose()
         
         # Get text
@@ -41,7 +64,8 @@ def scrape_content(url):
         chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
         text = ' '.join(chunk for chunk in chunks if chunk)
         
-        return text[:5000]  # Limit to 5000 chars for AI processing
+        return {'type': 'text', 'content': text[:5000]}  # Limit to 5000 chars for AI processing
+        
     except Exception as e:
         logger.error(f"Error scraping {url}: {e}")
         return None
@@ -49,11 +73,12 @@ def scrape_content(url):
 def analyze_with_bytez(content, subject_name):
     """Use Bytez AI to analyze and summarize content"""
     try:
-        url = "https://api.bytez.com/v1/chat/completions"
-        headers = {
-            "Authorization": f"Bearer {BYTEZ_API_KEY}",
-            "Content-Type": "application/json"
-        }
+        if not BYTEZ_API_KEY:
+            return None
+            
+        from bytez import Bytez
+        client = Bytez(BYTEZ_API_KEY)
+        model = client.model("openai/gpt-4o")
         
         prompt = f"""You are an expert educator creating study materials for GTU students.
 
@@ -70,24 +95,37 @@ Content:
 
 Format your response in clear sections with headers."""
 
-        payload = {
-            "model": "gpt-4o",
-            "messages": [
-                {"role": "system", "content": "You are an expert educator creating study materials."},
-                {"role": "user", "content": prompt}
-            ],
-            "max_tokens": 2000,
-            "temperature": 0.7
-        }
+        messages = [
+            {"role": "system", "content": "You are an expert educator creating study materials."},
+            {"role": "user", "content": prompt}
+        ]
         
-        response = requests.post(url, headers=headers, json=payload, timeout=30)
+        # Run model
+        result = model.run(messages)
         
-        if response.status_code == 200:
-            result = response.json()
-            return result['choices'][0]['message']['content']
+        output = result
+        # Handle tuple return (output, error)
+        if isinstance(result, tuple) and len(result) >= 2:
+            output, error = result[0], result[1]
+            if error:
+                logger.error(f"Bytez API error: {error}")
+                return None
+        
+        # Extract content from output
+        if isinstance(output, dict):
+            if 'content' in output:
+                return output['content']
+            elif 'choices' in output and len(output['choices']) > 0:
+                return output['choices'][0]['message']['content']
+            elif 'text' in output:
+                return output['text']
+            else:
+                logger.warning(f"Unexpected output format: {output}")
+                return str(output)
+        elif isinstance(output, str):
+            return output
         else:
-            logger.error(f"Bytez API error: {response.status_code} - {response.text}")
-            return None
+            return str(output)
             
     except Exception as e:
         logger.error(f"Error with Bytez AI: {e}")
@@ -158,93 +196,167 @@ def generate_pdf(subject_name, subject_code, unit, content, output_path):
         return False
 
 def process_subject(subject_code, subject_name, source_urls):
-    """Process a subject: scrape, analyze with AI, generate PDF"""
+    """Process a subject: scrape, analyze with AI (or fallback), generate PDF"""
     logger.info(f"\n{'='*60}")
     logger.info(f"📚 Processing: {subject_name} ({subject_code})")
     logger.info(f"{'='*60}")
     
+    # Ensure directory exists
+    os.makedirs("/tmp/gtu_pdfs", exist_ok=True)
+    
     for unit, url in enumerate(source_urls, 1):
         logger.info(f"\n📖 Unit {unit}: Scraping from {url}")
         
-        # Step 1: Scrape content
-        content = scrape_content(url)
-        if not content:
+        # Step 1: Scrape content or find PDF
+        result = scrape_content(url)
+        if not result:
             logger.warning(f"  ⚠️  Failed to scrape content")
             continue
-        
-        logger.info(f"  ✓ Scraped {len(content)} characters")
-        
-        # Step 2: Analyze with Bytez AI
-        logger.info(f"  🤖 Analyzing with Bytez AI...")
-        ai_content = analyze_with_bytez(content, f"{subject_name} - Unit {unit}")
-        
-        if not ai_content:
-            logger.warning(f"  ⚠️  AI analysis failed")
-            continue
-        
-        logger.info(f"  ✓ AI analysis complete ({len(ai_content)} characters)")
-        
-        # Step 3: Generate PDF
+            
         pdf_filename = f"{subject_code}_Unit{unit}_StudyGuide.pdf"
-        pdf_path = f"/tmp/{pdf_filename}"
+        pdf_path = f"/tmp/gtu_pdfs/{pdf_filename}"
+        source_name = "Scraped Content"
         
-        logger.info(f"  📄 Generating PDF...")
-        if generate_pdf(subject_name, subject_code, unit, ai_content, pdf_path):
+        if result['type'] == 'pdf':
+            logger.info(f"  📄 Found existing PDF: {result['url']}")
+            if download_pdf(result['url'], pdf_path):
+                logger.info(f"  ✓ Downloaded PDF")
+                source_name = "Official PDF"
+            else:
+                logger.warning("  ⚠️  Failed to download PDF, skipping unit")
+                continue
+        else:
+            # Text content
+            content = result['content']
+            logger.info(f"  ✓ Scraped {len(content)} characters (Text)")
             
-            # Step 4: Store in database
-            note_data = {
-                "subject_code": subject_code,
-                "unit": unit,
-                "title": f"{subject_name} - Unit {unit} Study Guide (AI Generated)",
-                "description": f"Comprehensive study guide generated by AI from {url}",
-                "file_url": pdf_path,  # In production, upload to cloud storage
-                "source_url": url,
-                "source_name": "AI Generated (Bytez)"
-            }
+            # Step 2: Analyze with Bytez AI (or Fallback)
+            ai_content = None
             
-            try:
-                supabase.table("notes").insert(note_data).execute()
-                logger.info(f"  ✓ Stored in database")
-            except Exception as e:
-                logger.warning(f"  ⚠️  Database insert failed (may be duplicate): {e}")
+            if BYTEZ_API_KEY and BYTEZ_API_KEY != "your_bytez_key_here":
+                logger.info(f"  🤖 Analyzing with Bytez AI...")
+                ai_content = analyze_with_bytez(content, f"{subject_name} - Unit {unit}")
+                if ai_content:
+                    source_name = "AI Generated (Bytez)"
+                else:
+                    logger.warning(f"  ⚠️  AI analysis failed, falling back to raw content")
+            else:
+                logger.info(f"  ℹ️  Bytez API key missing/invalid. Using raw content.")
+            
+            # Fallback to raw content if AI failed or key missing
+            if not ai_content:
+                ai_content = f"""# {subject_name} - Unit {unit}
+                
+                ## Study Material
+                
+                {content}
+                
+                *(Note: This content was scraped directly from {url} because AI summarization is currently unavailable)*
+                """
+            
+            # Step 3: Generate PDF
+            logger.info(f"  📄 Generating PDF...")
+            if not generate_pdf(subject_name, subject_code, unit, ai_content, pdf_path):
+                continue
+            
+        # Step 4: Store in database
+        note_data = {
+            "subject_code": subject_code,
+            "unit": unit,
+            "title": f"{subject_name} - Unit {unit} Study Guide",
+            "description": f"Study guide for Unit {unit} from {url}",
+            "file_url": f"/api/pdf/{pdf_filename}",  # URL to serve the PDF
+            "source_url": url,
+            "source_name": source_name,
+            "created_at": "now()"
+        }
         
-        logger.info(f"  ✅ Unit {unit} complete!")
+        try:
+            # Check if exists first to avoid duplicates (optional, but good practice)
+            # For now, just insert/upsert logic if possible, or just insert
+            supabase.table("notes").insert(note_data).execute()
+            logger.info(f"  ✓ Stored in database")
+        except Exception as e:
+            logger.warning(f"  ⚠️  Database insert failed (may be duplicate): {e}")
+    
+    logger.info(f"  ✅ Subject {subject_code} complete!")
+
+def get_all_subjects():
+    """Fetch all subjects from Supabase"""
+    try:
+        response = supabase.table("subjects").select("subject_code, subject_name").execute()
+        if response.data:
+            return response.data
+        return []
+    except Exception as e:
+        logger.error(f"Error fetching subjects: {e}")
+        return []
 
 def main():
     """Main execution"""
-    logger.info("🚀 AI-Powered PDF Generator Starting...")
-    logger.info("Using Bytez AI for content analysis\n")
+    logger.info("🚀 GTU Content Seeder & PDF Generator Starting...")
     
-    # Define subjects and their source URLs
-    subjects = [
-        {
-            "code": "2140701",
-            "name": "Data Structures",
-            "urls": [
-                "https://www.tutorialspoint.com/data_structures_algorithms/data_structures_basics.htm",
-                "https://www.geeksforgeeks.org/stack-data-structure/",
-                "https://www.programiz.com/dsa/linked-list"
-            ]
-        },
-        {
-            "code": "3140703",
-            "name": "Database Management Systems",
-            "urls": [
-                "https://www.javatpoint.com/dbms-tutorial",
-                "https://www.w3schools.com/sql/",
-                "https://www.studytonight.com/dbms/database-normalization.php"
-            ]
-        }
+    if not BYTEZ_API_KEY or BYTEZ_API_KEY == "your_bytez_key_here":
+        logger.warning("⚠️  BYTEZ_API_KEY not found or invalid. Running in FALLBACK mode (Raw Text).")
+    else:
+        logger.info("✨ AI Mode Enabled (Bytez API)")
+    
+    # 1. Fetch subjects from DB
+    db_subjects = get_all_subjects()
+    
+    # 2. Define default sources (Legitimate Educational Sites)
+    default_sources = [
+        "https://www.geeksforgeeks.org/computer-science-tutorials/",
+        "https://www.tutorialspoint.com/computer_fundamentals/index.htm",
+        "https://www.javatpoint.com/computer-fundamentals-tutorial"
     ]
     
-    for subject in subjects:
+    # Map specific subjects to specific URLs if known, otherwise use defaults
+    # This is a simplified mapping. In a real scraper, we'd search for the subject name.
+    subject_map = {
+        "Database Management Systems": [
+            "https://www.javatpoint.com/dbms-tutorial",
+            "https://www.geeksforgeeks.org/dbms/",
+            "https://www.tutorialspoint.com/dbms/index.htm"
+        ],
+        "Operating System": [
+            "https://www.javatpoint.com/os-tutorial",
+            "https://www.geeksforgeeks.org/operating-systems/",
+            "https://www.tutorialspoint.com/operating_system/index.htm"
+        ],
+        "Data Structures": [
+            "https://www.javatpoint.com/data-structure-tutorial",
+            "https://www.geeksforgeeks.org/data-structures/",
+            "https://www.programiz.com/dsa"
+        ]
+    }
+    
+    subjects_to_process = []
+    if db_subjects:
+        for s in db_subjects:
+            urls = subject_map.get(s['subject_name'], default_sources)
+            subjects_to_process.append({
+                "code": s['subject_code'],
+                "name": s['subject_name'],
+                "urls": urls
+            })
+    else:
+        # Fallback to hardcoded if DB empty
+        logger.warning("No subjects found in DB, using hardcoded list.")
+        subjects_to_process = [
+            {
+                "code": "3140703",
+                "name": "Database Management Systems",
+                "urls": subject_map["Database Management Systems"]
+            }
+        ]
+    
+    for subject in subjects_to_process:
         process_subject(subject['code'], subject['name'], subject['urls'])
     
     logger.info("\n" + "="*60)
-    logger.info("✅ PDF Generation Complete!")
+    logger.info("✅ Seeding Complete!")
     logger.info("="*60)
-    logger.info("\n📌 Generated PDFs are stored in /tmp/")
-    logger.info("💡 In production, upload these to cloud storage (S3, Google Drive, etc.)")
 
 if __name__ == "__main__":
     main()

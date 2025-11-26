@@ -9,6 +9,24 @@ from backend.supabase_client import supabase
 
 def seed_data():
     print("Starting data seeding...")
+    
+    # Authenticate to bypass RLS for study_materials
+    user_id = None
+    try:
+        # Try to sign in or sign up a seeder user
+        email = "seeder@gtu.edu"
+        password = "seederpassword123"
+        try:
+            auth_res = supabase.auth.sign_in_with_password({"email": email, "password": password})
+            user_id = auth_res.user.id
+            print(f"Authenticated as seeder: {user_id}")
+        except:
+            print("Creating seeder user...")
+            auth_res = supabase.auth.sign_up({"email": email, "password": password})
+            user_id = auth_res.user.id
+            print(f"Created seeder user: {user_id}")
+    except Exception as e:
+        print(f"Auth failed: {e}. Some inserts might fail due to RLS.")
 
     # 1. Subjects
     subjects = [
@@ -38,7 +56,7 @@ def seed_data():
         except Exception as e:
             print(f"Error creating subject {sub['subject_name']}: {e}")
 
-    # 2. Syllabus & Syllabus Content
+    # 2. Syllabus
     print("\nSeeding Syllabus...")
     toc_id = created_subjects.get("3160704")
     if toc_id:
@@ -59,20 +77,20 @@ def seed_data():
         {
             "subject_code": "3160713", # Web Programming
             "practical_number": 1,
-            "title": "HTML Basics",
+            "program_title": "HTML Basics",
             "aim": "Create a simple webpage using HTML5 structure elements.",
             "code": "<!DOCTYPE html>\n<html>\n<head><title>My Page</title></head>\n<body>\n<h1>Hello World</h1>\n<p>This is a paragraph.</p>\n</body>\n</html>",
             "output": "Displays a heading and a paragraph.",
-            "viva_questions": ["What is DOCTYPE?", "Difference between div and span?"]
+            "language": "html"
         },
         {
             "subject_code": "3160707", # Advanced Java
             "practical_number": 1,
-            "title": "JDBC Connection",
+            "program_title": "JDBC Connection",
             "aim": "Write a program to connect to a database using JDBC.",
             "code": "import java.sql.*;\nclass DBConnect {\n  public static void main(String args[]) {\n    try {\n      Class.forName(\"com.mysql.jdbc.Driver\");\n      Connection con = DriverManager.getConnection(\"jdbc:mysql://localhost:3306/sonoo\",\"root\",\"root\");\n      // ...\n    } catch(Exception e){ System.out.println(e);}\n  }\n}",
             "output": "Connection established successfully.",
-            "viva_questions": ["What are the steps to connect to DB?", "Types of JDBC drivers?"]
+            "language": "java"
         }
     ]
     for prog in lab_programs:
@@ -86,17 +104,17 @@ def seed_data():
     playlists = [
         {
             "subject_code": "3160704",
-            "title": "Theory of Computation Full Course",
-            "playlist_id": "PLBlnK6fEyqRgp46ZLvXl95v42Ks45yHg_",
-            "description": "Complete TOC lectures by Neso Academy",
-            "thumbnail_url": "https://i.ytimg.com/vi/58N2N7zJGrQ/hqdefault.jpg"
+            "playlist_name": "Theory of Computation Full Course",
+            "youtube_playlist_url": "https://www.youtube.com/playlist?list=PLBlnK6fEyqRgp46ZLvXl95v42Ks45yHg_",
+            "channel_name": "Neso Academy",
+            "total_videos": 50
         },
         {
             "subject_code": "3160714",
-            "title": "Data Mining Tutorials",
-            "playlist_id": "PLLGywfVR_Gy1K8N5k7D-2Qf-M_W8S-0hQ",
-            "description": "Data Mining and Warehousing concepts",
-            "thumbnail_url": "https://i.ytimg.com/vi/jEUUqjTq3H0/hqdefault.jpg"
+            "playlist_name": "Data Mining Tutorials",
+            "youtube_playlist_url": "https://www.youtube.com/playlist?list=PLLGywfVR_Gy1K8N5k7D-2Qf-M_W8S-0hQ",
+            "channel_name": "Knowledge Gate",
+            "total_videos": 30
         }
     ]
     for pl in playlists:
@@ -137,27 +155,32 @@ def seed_data():
 
     # 7. Study Materials (Previous Papers / Notes)
     print("\nSeeding Study Materials...")
-    materials = [
-        {
-            "subject_code": "3160704",
-            "title": "TOC Winter 2023 Paper",
-            "material_type": "paper",
-            "content": "Previous year question paper",
-            "file_url": "https://www.gtu.ac.in/uploads/W2023/3160704.pdf"
-        },
-        {
-            "subject_code": "3160704",
-            "title": "Unit 1 - Automata Theory Notes",
-            "material_type": "notes",
-            "content": "Comprehensive notes for Unit 1",
-            "file_url": "https://example.com/notes/toc_unit1.pdf"
-        }
-    ]
-    for mat in materials:
-        try:
-            supabase.table("study_materials").insert(mat).execute()
-        except Exception as e:
-            print(f"Error seeding study material: {e}")
+    if user_id:
+        materials = [
+            {
+                "subject_code": "3160704",
+                "title": "TOC Winter 2023 Paper",
+                "material_type": "paper",
+                "content": "Previous year question paper",
+                "file_url": "https://www.gtu.ac.in/uploads/W2023/3160704.pdf",
+                "uploaded_by": user_id
+            },
+            {
+                "subject_code": "3160704",
+                "title": "Unit 1 - Automata Theory Notes",
+                "material_type": "notes",
+                "content": "Comprehensive notes for Unit 1",
+                "file_url": "https://example.com/notes/toc_unit1.pdf",
+                "uploaded_by": user_id
+            }
+        ]
+        for mat in materials:
+            try:
+                supabase.table("study_materials").insert(mat).execute()
+            except Exception as e:
+                print(f"Error seeding study material: {e}")
+    else:
+        print("Skipping study materials due to auth failure")
 
     print("\nData seeding completed!")
 

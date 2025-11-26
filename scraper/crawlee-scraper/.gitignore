@@ -1,0 +1,6 @@
+// Add this file to gitignore patterns
+storage/
+.crawlee/
+node_modules/
+*.log
+.DS_Store

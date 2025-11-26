@@ -51,6 +51,40 @@ const SubjectChat = ({ subjectCode, subjectName, onClose }) => {
         setLoading(true);
 
         try {
+            // Try N8N webhook first
+            const n8nModule = await import('../services/n8nService');
+            const result = await n8nModule.sendSubjectChat(
+                subjectCode,
+                subjectName,
+                currentInput,
+                messages
+            );
+
+            if (result.success && result.data) {
+                const { answer_preview, final_answer, pdfUrl } = result.data;
+
+                const responseText = final_answer || answer_preview || "I received your question but couldn't generate a response.";
+
+                let displayText = responseText;
+                if (pdfUrl) {
+                    displayText += `\n\n📄 [View Generated PDF](${pdfUrl})`;
+                }
+
+                setMessages(prev => [...prev, { text: displayText, sender: 'ai' }]);
+            } else {
+                // Fallback to existing backend
+                await fallbackToBackend(currentInput);
+            }
+        } catch (error) {
+            console.error('N8N error, falling back to backend:', error);
+            await fallbackToBackend(currentInput);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const fallbackToBackend = async (question) => {
+        try {
             const response = await fetch('http://localhost:5004/api/ai-chat/subject', {
                 method: 'POST',
                 headers: {
@@ -58,7 +92,7 @@ const SubjectChat = ({ subjectCode, subjectName, onClose }) => {
                 },
                 body: JSON.stringify({
                     subject_code: subjectCode,
-                    question: currentInput,
+                    question: question,
                     chat_history: messages.map(m => ({ role: m.sender === 'user' ? 'user' : 'assistant', content: m.text }))
                 }),
             });
@@ -79,8 +113,6 @@ const SubjectChat = ({ subjectCode, subjectName, onClose }) => {
                 text: "Sorry, I'm having trouble connecting right now. Please ensure the backend is running.",
                 sender: 'ai'
             }]);
-        } finally {
-            setLoading(false);
         }
     };
 
@@ -155,8 +187,8 @@ const SubjectChat = ({ subjectCode, subjectName, onClose }) => {
                         >
                             <div
                                 className={`max-w-[80%] p-4 rounded-lg ${msg.sender === 'user'
-                                        ? 'bg-blue-600 text-white rounded-br-none'
-                                        : 'bg-white text-gray-800 border border-gray-200 rounded-bl-none shadow-sm'
+                                    ? 'bg-blue-600 text-white rounded-br-none'
+                                    : 'bg-white text-gray-800 border border-gray-200 rounded-bl-none shadow-sm'
                                     }`}
                             >
                                 {msg.sender === 'ai' ? (
@@ -230,8 +262,8 @@ const SubjectChat = ({ subjectCode, subjectName, onClose }) => {
                             onClick={handleSend}
                             disabled={loading || !input.trim()}
                             className={`p-3 rounded-lg text-white transition-all ${loading || !input.trim()
-                                    ? 'bg-blue-400 cursor-not-allowed'
-                                    : 'bg-blue-600 hover:bg-blue-700 transform hover:scale-105'
+                                ? 'bg-blue-400 cursor-not-allowed'
+                                : 'bg-blue-600 hover:bg-blue-700 transform hover:scale-105'
                                 }`}
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">

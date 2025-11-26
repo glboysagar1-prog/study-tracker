@@ -12,6 +12,7 @@ def create_app():
     
     # Determine allowed origins based on environment
     flask_env = os.getenv('FLASK_ENV', 'development')
+    print(f"DEBUG: FLASK_ENV is {flask_env}")
     
     if flask_env == 'production':
         # Production origins - Update these with your actual deployment URLs
@@ -30,19 +31,16 @@ def create_app():
             "http://127.0.0.1:3002"
         ]
     
-    # Configure CORS to allow requests from frontend
-    CORS(app, resources={
-        r"/api/*": {
-            "origins": allowed_origins,
-            "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-            "allow_headers": ["Content-Type", "Authorization"]
-        },
-        r"/auth/*": {
-            "origins": allowed_origins,
-            "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-            "allow_headers": ["Content-Type", "Authorization"]
-        }
-    })
+    # Configure CORS
+    if flask_env == 'production':
+        CORS(app, resources={
+            r"/api/*": {"origins": allowed_origins},
+            r"/auth/*": {"origins": allowed_origins}
+        })
+    else:
+        # Allow all origins in development
+        print(f"DEBUG: Starting in {flask_env} mode with CORS allowing all origins")
+        CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
 
     
     # Load configuration
@@ -65,10 +63,16 @@ def create_app():
     # PDF serving endpoint for local development
     @app.route('/api/pdf/<path:filename>')
     def serve_pdf(filename):
-        """Serve PDF files from /tmp/ directory"""
+        """Serve PDF files from /tmp/gtu_pdfs/ directory"""
         from flask import send_file
         import os
         try:
+            # Check /tmp/gtu_pdfs/ first
+            pdf_path = f"/tmp/gtu_pdfs/{filename}"
+            if os.path.exists(pdf_path):
+                return send_file(pdf_path, mimetype='application/pdf')
+            
+            # Fallback to /tmp/ for backward compatibility
             pdf_path = f"/tmp/{filename}"
             if os.path.exists(pdf_path):
                 return send_file(pdf_path, mimetype='application/pdf')

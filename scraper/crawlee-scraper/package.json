@@ -1,0 +1,23 @@
+{
+    "name": "gtu-crawlee-scraper",
+    "version": "1.0.0",
+    "description": "Crawlee-based web scraper for GTU syllabus and PDFs",
+    "type": "module",
+    "main": "src/main.js",
+    "scripts": {
+        "start": "node src/main.js",
+        "dev": "node --watch src/main.js"
+    },
+    "dependencies": {
+        "@supabase/supabase-js": "^2.39.0",
+        "bytez": "^0.7.0",
+        "crawlee": "^3.7.0",
+        "dotenv": "^16.3.1",
+        "pdf-lib": "^1.17.1",
+        "pdf-parse": "^1.1.1",
+        "playwright": "^1.40.0"
+    },
+    "devDependencies": {
+        "@apify/tsconfig": "^0.1.0"
+    }
+}
