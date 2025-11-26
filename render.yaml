@@ -1,6 +1,4 @@
-build:
-  dockerfile: Dockerfile
-  context: .
+
 services:
   # Flask Backend API
   - type: web
