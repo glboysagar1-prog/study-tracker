@@ -1277,32 +1277,44 @@ def subject_chat():
         syllabus_response = supabase.table("syllabus_content").select("*").eq("subject_code", subject_code).execute()
         topics = [item['topic'] for item in (syllabus_response.data if syllabus_response.data else [])]
         
-        # Call AI agent with context
-        try:
-            import requests as req
-            ai_response = req.post('http://localhost:8001/chat', json={
-                'message': f"Subject: {subject_name} ({subject_code})\nTopics: {', '.join(topics[:10])}\n\nStudent Question: {question}",
-                'conversation_id': subject_code
-            }, timeout=30)
-            
-            if ai_response.status_code == 200:
-                ai_data = ai_response.json()
-                return jsonify({
-                    'success': True,
-                    'response': ai_data.get('response', 'No response generated')
-                }), 200
-            else:
-                return jsonify({'error': 'AI service unavailable'}), 500
-                
-        except Exception as e:
-            # Fallback response
-            return jsonify({
-                'success': True,
-                'response': f"I'm your AI tutor for {subject_name}. I can help explain concepts, provide study tips, and answer questions about the syllabus. How can I assist you today?"
-            }), 200
+        # Build context for AI
+        context = f"""You are an expert AI tutor for {subject_name} ({subject_code}).
+The subject covers the following topics: {', '.join(topics[:15]) if topics else 'Various topics'}.
+
+Your role is to:
+- Answer student questions clearly and accurately
+- Provide detailed explanations with examples
+- Help students understand difficult concepts
+- Suggest study strategies and exam preparation tips
+- Use simple language that students can understand
+
+Always be encouraging and supportive."""
+
+        # Use Bytez AI directly via AIProcessor
+        from backend.ai import ai_processor
+        
+        # Build full prompt with chat history
+        full_prompt = ""
+        if chat_history:
+            for msg in chat_history[-5:]:  # Last 5 messages for context
+                role = msg.get('role', 'user')
+                content = msg.get('content', '')
+                full_prompt += f"{role.capitalize()}: {content}\n"
+        
+        full_prompt += f"Student: {question}"
+        
+        # Generate response using Bytez GPT-4o
+        ai_response = ai_processor.generate_response(full_prompt, context=context)
+        
+        return jsonify({
+            'success': True,
+            'response': ai_response
+        }), 200
         
     except Exception as e:
+        logger.error(f"Subject chat error: {str(e)}", exc_info=True)
         return jsonify({'error': f'Failed to process chat request: {str(e)}'}), 500
+
 
 @api_bp.route('/ai-chat/explain-topic', methods=['POST'])
 def explain_topic():
@@ -1319,29 +1331,38 @@ def explain_topic():
         subject_response = supabase.table("subjects").select("*").eq("subject_code", subject_code).execute()
         subject_name = subject_response.data[0]['subject_name'] if subject_response.data else subject_code
         
-        # Call AI agent for explanation
-        try:
-            import requests as req
-            ai_response = req.post('http://localhost:8001/chat', json={
-                'message': f"Provide a detailed explanation of '{topic}' in the context of {subject_name}. Include:\n1. Definition and core concepts\n2. Key points to remember\n3. Real-world applications\n4. Common exam questions\n\nFormat the response with clear headings and bullet points.",
-                'conversation_id': f"{subject_code}_explanations"
-            }, timeout=30)
-            
-            if ai_response.status_code == 200:
-                ai_data = ai_response.json()
-                return jsonify({
-                    'success': True,
-                    'explanation': ai_data.get('response', 'Explanation not available')
-                }), 200
-            else:
-                return jsonify({'error': 'AI service unavailable'}), 500
-                
-        except Exception as e:
-            # Fallback response
-            return jsonify({
-                'success': True,
-                'explanation': f"**{topic}** is an important concept in {subject_name}. For a detailed explanation, please ensure the AI service is running."
-            }), 200
+        # Build context for comprehensive explanation
+        context = f"""You are an expert educator explaining concepts from {subject_name} ({subject_code}).
+
+Your goal is to provide a comprehensive, well-structured explanation that helps students learn effectively.
+
+Format your response with:
+- Clear headings (use ** for bold)
+- Bullet points for key concepts
+- Examples where relevant
+- Simple, student-friendly language"""
+
+        # Build the explanation prompt
+        prompt = f"""Provide a detailed explanation of '{topic}' in the context of {subject_name}.
+
+Include:
+1. **Definition and Core Concepts**: What is {topic}? What are the fundamental principles?
+2. **Key Points to Remember**: The most important facts and concepts students should memorize
+3. **Real-World Applications**: Where and how is this used in practice?
+4. **Common Exam Questions**: Types of questions students might face about this topic
+5. **Study Tips**: How to best understand and remember this concept
+
+Make it comprehensive but easy to understand."""
+
+        # Use Bytez AI directly
+        from backend.ai import ai_processor
+        explanation = ai_processor.generate_response(prompt, context=context)
+        
+        return jsonify({
+            'success': True,
+            'explanation': explanation
+        }), 200
         
     except Exception as e:
+        logger.error(f"Explain topic error: {str(e)}", exc_info=True)
         return jsonify({'error': f'Failed to generate explanation: {str(e)}'}), 500
