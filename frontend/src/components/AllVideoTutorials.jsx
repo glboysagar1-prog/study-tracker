@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import VideoPlaylist from './VideoPlaylist';
 
-const API_BASE_URL = 'http://localhost:5004';
+import { API_BASE_URL } from '../config/api';
 
 const AllVideoTutorials = () => {
     const [subjects, setSubjects] = useState([]);

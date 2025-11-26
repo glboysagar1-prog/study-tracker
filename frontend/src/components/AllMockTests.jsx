@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 
-const API_BASE_URL = 'http://localhost:5004';
+import { API_BASE_URL } from '../config/api';
 
 const AllMockTests = () => {
     const [subjects, setSubjects] = useState([]);

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import './MaterialViewer.css';
 
-const API_BASE_URL = 'http://localhost:5004/api';
+import { API_BASE_URL } from '../config/api';
 
 const MaterialViewer = ({ subjectCode }) => {
     const [subject, setSubject] = useState(null);

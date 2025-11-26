@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import LabPrograms from './LabPrograms';
 
-const API_BASE_URL = 'http://localhost:5004';
+import { API_BASE_URL } from '../config/api';
 
 const AllLabPrograms = () => {
     const [subjects, setSubjects] = useState([]);

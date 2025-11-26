@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-const API_BASE_URL = 'http://localhost:5004';
+import { API_BASE_URL } from '../config/api';
 
 const LabPrograms = ({ subjectCode }) => {
     const [programs, setPrograms] = useState([]);

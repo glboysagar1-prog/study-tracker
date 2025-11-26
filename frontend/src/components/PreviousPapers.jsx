@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
+import { API_BASE_URL } from '../config/api';
 
 const PreviousPapers = () => {
   const { subjectId } = useParams();
@@ -12,7 +13,7 @@ const PreviousPapers = () => {
     const fetchPapersData = async () => {
       try {
         // Fetch subject details
-        const subjectResponse = await fetch(`http://localhost:5004/api/subjects/${subjectId}`);
+        const subjectResponse = await fetch(`${API_BASE_URL}/subjects/${subjectId}`);
         const subjectData = await subjectResponse.json();
 
         if (subjectData.subject) {
@@ -21,7 +22,7 @@ const PreviousPapers = () => {
         }
 
         // Fetch previous papers data
-        const response = await fetch(`http://localhost:5004/api/previous-papers/${subjectId}`);
+        const response = await fetch(`${API_BASE_URL}/previous-papers/${subjectId}`);
         const data = await response.json();
 
         if (data.papers) {

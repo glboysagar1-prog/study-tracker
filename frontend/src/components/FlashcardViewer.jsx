@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_BASE_URL } from '../config/api';
 
 const FlashcardViewer = ({ subjectCode, unit, onClose }) => {
     const [flashcards, setFlashcards] = useState([]);
@@ -11,8 +12,8 @@ const FlashcardViewer = ({ subjectCode, unit, onClose }) => {
         const fetchFlashcards = async () => {
             try {
                 const endpoint = unit
-                    ? `http://localhost:5004/api/flashcards/${subjectCode}/${unit}`
-                    : `http://localhost:5004/api/flashcards/${subjectCode}`;
+                    ? `${API_BASE_URL}/flashcards/${subjectCode}/${unit}`
+                    : `${API_BASE_URL}/flashcards/${subjectCode}`;
 
                 const response = await fetch(endpoint);
                 const data = await response.json();
@@ -181,8 +182,8 @@ const FlashcardViewer = ({ subjectCode, unit, onClose }) => {
                             onClick={handlePrevious}
                             disabled={currentIndex === 0}
                             className={`px-4 py-2 rounded-md font-medium ${currentIndex === 0
-                                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                                    : 'bg-blue-500 hover:bg-blue-600 text-white'
+                                ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                : 'bg-blue-500 hover:bg-blue-600 text-white'
                                 }`}
                         >
                             ← Previous
@@ -198,8 +199,8 @@ const FlashcardViewer = ({ subjectCode, unit, onClose }) => {
                             onClick={handleNext}
                             disabled={currentIndex === flashcards.length - 1}
                             className={`px-4 py-2 rounded-md font-medium ${currentIndex === flashcards.length - 1
-                                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                                    : 'bg-blue-500 hover:bg-blue-600 text-white'
+                                ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                : 'bg-blue-500 hover:bg-blue-600 text-white'
                                 }`}
                         >
                             Next →

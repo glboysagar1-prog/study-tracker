@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import './SubjectBrowser.css';
 
-const API_BASE_URL = 'http://localhost:5004/api';
+import { API_BASE_URL } from '../config/api';
 
 const SubjectBrowser = () => {
     const [branches, setBranches] = useState([]);

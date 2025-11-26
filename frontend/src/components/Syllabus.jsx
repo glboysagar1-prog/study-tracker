@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { API_BASE_URL } from '../config/api';
 import FlashcardViewer from './FlashcardViewer';
 import SubjectChat from './SubjectChat';
 
@@ -48,7 +49,7 @@ const Syllabus = () => {
 
   const fallbackSummarize = async (unitNumber) => {
     try {
-      const response = await fetch('http://localhost:5004/api/summarize-unit', {
+      const response = await fetch(`${API_BASE_URL}/api/summarize-unit`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

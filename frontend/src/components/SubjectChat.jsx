@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { API_BASE_URL } from '../config/api';
 
 const SubjectChat = ({ subjectCode, subjectName, onClose }) => {
     const [messages, setMessages] = useState([
@@ -85,7 +86,7 @@ const SubjectChat = ({ subjectCode, subjectName, onClose }) => {
 
     const fallbackToBackend = async (question) => {
         try {
-            const response = await fetch('http://localhost:5004/api/ai-chat/subject', {
+            const response = await fetch(`${API_BASE_URL}/ai-chat/subject`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -129,7 +130,7 @@ const SubjectChat = ({ subjectCode, subjectName, onClose }) => {
         setLoading(true);
 
         try {
-            const response = await fetch('http://localhost:5004/api/ai-chat/explain-topic', {
+            const response = await fetch(`${API_BASE_URL}/ai-chat/explain-topic`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

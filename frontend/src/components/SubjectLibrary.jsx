@@ -7,7 +7,7 @@ import ImportantQuestionsList from './ImportantQuestionsList';
 
 import SyllabusViewer from './SyllabusViewer';
 
-const API_BASE_URL = 'http://localhost:5004';
+import { API_BASE_URL } from '../config/api';
 
 const SubjectLibrary = () => {
     const { subjectId } = useParams();

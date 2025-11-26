@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-const API_BASE_URL = 'http://localhost:5004';
+import { API_BASE_URL } from '../config/api';
 
 const SyllabusViewer = ({ subjectCode }) => {
     const [syllabusData, setSyllabusData] = useState(null);
