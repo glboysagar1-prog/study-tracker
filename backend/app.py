@@ -31,11 +31,11 @@ def create_app():
             "http://127.0.0.1:3002"
         ]
     
-    # Configure CORS
     if flask_env == 'production':
+        # Production origins - Allow all Vercel deployments
         CORS(app, resources={
-            r"/api/*": {"origins": allowed_origins},
-            r"/auth/*": {"origins": allowed_origins}
+            r"/api/*": {"origins": "*"},  # Temporarily allow all origins for Vercel previews
+            r"/auth/*": {"origins": "*"}
         })
     else:
         # Allow all origins in development

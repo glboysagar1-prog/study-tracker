@@ -20,7 +20,7 @@ const Subjects = () => {
   useEffect(() => {
     const fetchMetadata = async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/api/subjects/metadata`);
+        const response = await fetch(`${API_BASE_URL}/subjects/metadata`);
         const data = await response.json();
         setMetadata(data);
       } catch (error) {
@@ -40,7 +40,7 @@ const Subjects = () => {
         if (filters.branch) params.append('branch', filters.branch);
         if (filters.semester) params.append('semester', filters.semester);
 
-        const response = await fetch(`${API_BASE_URL}/api/subjects?${params.toString()}`);
+        const response = await fetch(`${API_BASE_URL}/subjects?${params.toString()}`);
         const data = await response.json();
 
         if (data.subjects) {
