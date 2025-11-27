@@ -6,6 +6,7 @@ import { API_BASE_URL } from '../config/api';
 const Subjects = () => {
   const [subjects, setSubjects] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [filters, setFilters] = useState({
     course: '',
     branch: '',
@@ -20,11 +21,17 @@ const Subjects = () => {
   useEffect(() => {
     const fetchMetadata = async () => {
       try {
+        console.log('Fetching metadata from:', `${API_BASE_URL}/subjects/metadata`);
         const response = await fetch(`${API_BASE_URL}/subjects/metadata`);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
         const data = await response.json();
+        console.log('Metadata received:', data);
         setMetadata(data);
       } catch (error) {
         console.error('Error fetching metadata:', error);
+        setError(`Failed to load metadata: ${error.message}`);
       }
     };
     fetchMetadata();
@@ -33,6 +40,7 @@ const Subjects = () => {
   useEffect(() => {
     const fetchSubjects = async () => {
       setLoading(true);
+      setError(null);
       try {
         // Build query string
         const params = new URLSearchParams();
@@ -40,16 +48,30 @@ const Subjects = () => {
         if (filters.branch) params.append('branch', filters.branch);
         if (filters.semester) params.append('semester', filters.semester);
 
-        const response = await fetch(`${API_BASE_URL}/subjects?${params.toString()}`);
+        const url = `${API_BASE_URL}/subjects?${params.toString()}`;
+        console.log('Fetching subjects from:', url);
+
+        const response = await fetch(url);
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
         const data = await response.json();
+        console.log('Subjects data received:', data);
 
         if (data.subjects) {
           setSubjects(data.subjects);
+          console.log('Set subjects:', data.subjects.length, 'subjects');
+        } else {
+          console.warn('No subjects field in response:', data);
+          setSubjects([]);
         }
 
         setLoading(false);
       } catch (error) {
         console.error('Error fetching subjects:', error);
+        setError(`Failed to load subjects: ${error.message}`);
         setLoading(false);
       }
     };
@@ -134,6 +156,21 @@ const Subjects = () => {
             </button>
           </div>
         </div>
+
+        {/* Error Display */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 p-4 rounded-lg mb-6">
+            <div className="flex items-center">
+              <svg className="w-5 h-5 text-red-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+              <p className="text-red-800 font-medium">{error}</p>
+            </div>
+            <p className="text-red-700 text-sm mt-2">
+              Please ensure the backend server is running at {API_BASE_URL}
+            </p>
+          </div>
+        )}
 
         {loading ? (
           <div className="flex justify-center py-12">
