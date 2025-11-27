@@ -1,11 +1,22 @@
 // API Base URL - can be overridden by environment variable
 const getApiBaseUrl = () => {
-    let url = import.meta.env.VITE_API_URL || 'http://localhost:5004/api';
-    // Ensure it ends with /api if it's not the default localhost (which already has it)
-    if (url !== 'http://localhost:5004/api' && !url.endsWith('/api')) {
-        url = `${url}/api`;
+    // Check if we have an explicit VITE_API_URL environment variable
+    if (import.meta.env.VITE_API_URL) {
+        let url = import.meta.env.VITE_API_URL;
+        // Ensure it ends with /api if it doesn't already
+        if (!url.endsWith('/api')) {
+            url = `${url}/api`;
+        }
+        return url;
     }
-    return url;
+
+    // In production (deployed), use relative URL so Vercel rewrites work
+    // In development, use localhost
+    if (import.meta.env.MODE === 'production') {
+        return '/api';
+    }
+
+    return 'http://localhost:5004/api';
 };
 
 export const API_BASE_URL = getApiBaseUrl();
