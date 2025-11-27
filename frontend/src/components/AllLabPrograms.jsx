@@ -15,7 +15,7 @@ const AllLabPrograms = () => {
 
     const fetchSubjects = async () => {
         try {
-            const response = await fetch(`${API_BASE_URL}/api/subjects`);
+            const response = await fetch(`${API_BASE_URL}/subjects`);
             const data = await response.json();
             if (data.subjects) {
                 setSubjects(data.subjects);

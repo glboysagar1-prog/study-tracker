@@ -15,33 +15,19 @@ def create_app():
     print(f"DEBUG: FLASK_ENV is {flask_env}")
     
     if flask_env == 'production':
-        # Production origins - Update these with your actual deployment URLs
-        allowed_origins = [
-            "https://gtu-exam-prep.vercel.app",  # Update with your Vercel domain
-            "https://*.vercel.app",  # Allow all Vercel preview deployments
-        ]
-    else:
-        # Development origins
-        allowed_origins = [
-            "http://localhost:3000",
-            "http://localhost:3001", 
-            "http://localhost:3002",
-            "http://127.0.0.1:3000",
-            "http://127.0.0.1:3001", 
-            "http://127.0.0.1:3002"
-        ]
-    
-    if flask_env == 'production':
-        # Production origins - Allow all Vercel deployments
+        # Production origins - Allow all for Vercel deployments
+        print("DEBUG: Starting in production mode with CORS allowing all origins")
         CORS(app, resources={
-            r"/api/*": {"origins": "*"},  # Temporarily allow all origins for Vercel previews
+            r"/api/*": {"origins": "*"},
             r"/auth/*": {"origins": "*"}
         })
     else:
-        # Allow all origins in development
+        # Development origins - Allow all for development
         print(f"DEBUG: Starting in {flask_env} mode with CORS allowing all origins")
-        CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
-
+        CORS(app, resources={
+            r"/api/*": {"origins": "*"},
+            r"/auth/*": {"origins": "*"}
+        })
     
     # Load configuration
     from .config import Config

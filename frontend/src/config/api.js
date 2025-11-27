@@ -2,12 +2,8 @@
 const getApiBaseUrl = () => {
     // Check if we have an explicit VITE_API_URL environment variable
     if (import.meta.env.VITE_API_URL) {
-        let url = import.meta.env.VITE_API_URL;
-        // Ensure it ends with /api if it doesn't already
-        if (!url.endsWith('/api')) {
-            url = `${url}/api`;
-        }
-        return url;
+        // VITE_API_URL should already include /api, so return it as is
+        return import.meta.env.VITE_API_URL;
     }
 
     // In production (deployed), use relative URL so Vercel rewrites work
@@ -16,6 +12,7 @@ const getApiBaseUrl = () => {
         return '/api';
     }
 
+    // For development, use the correct local backend port (5004 based on our setup)
     return 'http://localhost:5004/api';
 };
 

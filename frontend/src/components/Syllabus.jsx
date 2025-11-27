@@ -4,18 +4,81 @@ import { API_BASE_URL } from '../config/api';
 import FlashcardViewer from './FlashcardViewer';
 import SubjectChat from './SubjectChat';
 
-
 const Syllabus = () => {
   const { subjectId } = useParams();
   const [syllabus, setSyllabus] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [subjectName, setSubjectName] = useState('');
   const [subject, setSubject] = useState(null);
   const [activeTab, setActiveTab] = useState('syllabus');
   const [importantQuestions, setImportantQuestions] = useState([]);
   const [studyMaterials, setStudyMaterials] = useState([]);
   const [showFlashcards, setShowFlashcards] = useState(false);
+  const [selectedUnit, setSelectedUnit] = useState(null);
+  const [showChat, setShowChat] = useState(false);
   const [summaryModal, setSummaryModal] = useState({ show: false, content: '', loading: false, unit: null });
+
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!subjectId) {
+        setError('No subject ID provided');
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Fetch subject details
+        const subjectResponse = await fetch(`${API_BASE_URL}/subjects/${subjectId}`);
+        if (!subjectResponse.ok) {
+          throw new Error(`Failed to fetch subject: ${subjectResponse.status}`);
+        }
+        const subjectData = await subjectResponse.json();
+        
+        if (subjectData.error) {
+          throw new Error(subjectData.error);
+        }
+        
+        setSubject(subjectData.subject);
+        setSubjectName(subjectData.subject.subject_name);
+
+        // Fetch syllabus
+        const syllabusResponse = await fetch(`${API_BASE_URL}/syllabus/${subjectId}`);
+        if (!syllabusResponse.ok) {
+          throw new Error(`Failed to fetch syllabus: ${syllabusResponse.status}`);
+        }
+        const syllabusData = await syllabusResponse.json();
+        setSyllabus(syllabusData.syllabus || []);
+
+        // Fetch important questions
+        const questionsResponse = await fetch(`${API_BASE_URL}/questions/important/${subjectId}`);
+        if (!questionsResponse.ok) {
+          throw new Error(`Failed to fetch questions: ${questionsResponse.status}`);
+        }
+        const questionsData = await questionsResponse.json();
+        setImportantQuestions(questionsData.questions || []);
+
+        // Fetch study materials
+        const materialsResponse = await fetch(`${API_BASE_URL}/study-materials/${subjectId}`);
+        if (!materialsResponse.ok) {
+          throw new Error(`Failed to fetch study materials: ${materialsResponse.status}`);
+        }
+        const materialsData = await materialsResponse.json();
+        setStudyMaterials(materialsData.materials || []);
+
+        setLoading(false);
+      } catch (err) {
+        console.error('Error fetching data:', err);
+        setError(err.message);
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [subjectId]);
 
   const handleSummarize = async (unitNumber) => {
     setSummaryModal({ show: true, content: '', loading: true, unit: unitNumber });
@@ -49,7 +112,7 @@ const Syllabus = () => {
 
   const fallbackSummarize = async (unitNumber) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/summarize-unit`, {
+      const response = await fetch(`${API_BASE_URL}/summarize-unit`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -79,6 +142,28 @@ const Syllabus = () => {
     );
   }
 
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="bg-white p-8 rounded-lg shadow-md max-w-2xl">
+          <div className="flex items-center mb-4">
+            <svg className="w-6 h-6 text-red-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <h2 className="text-2xl font-bold text-gray-800">Error Loading Content</h2>
+          </div>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <p className="text-gray-500 text-sm">Please check that the subject ID is correct and the backend server is running.</p>
+          <div className="mt-6">
+            <Link to="/subjects" className="text-blue-500 hover:text-blue-700 font-medium">
+              ← Back to Subjects
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-100">
       <div className="container mx-auto px-4 py-8">
@@ -99,7 +184,6 @@ const Syllabus = () => {
             </button>
           </div>
         </div>
-
 
         {/* Tabs */}
         <div className="flex border-b border-gray-200 mb-6">
@@ -125,47 +209,53 @@ const Syllabus = () => {
 
         {activeTab === 'syllabus' ? (
           <div className="space-y-6">
-            {syllabus.map((unit) => (
-              <div key={unit.unit_number} className="bg-white p-6 rounded-lg shadow-md">
-                <div className="flex items-center mb-4">
-                  <div className="bg-blue-500 text-white rounded-full w-8 h-8 flex items-center justify-center mr-3">
-                    {unit.unit_number}
-                  </div>
-                  <h2 className="text-xl font-semibold">{unit.unit_title}</h2>
-                </div>
-                <p className="text-gray-700 ml-11">{unit.content}</p>
-
-                <div className="mt-4 ml-11 flex gap-2">
-                  <button
-                    onClick={() => {
-                      setSelectedUnit(unit.unit_number);
-                      setShowFlashcards(true);
-                    }}
-                    className="bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white px-4 py-2 rounded-md flex items-center gap-2 transition-all transform hover:scale-105"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                    </svg>
-                    View Flashcards
-                  </button>
-                  <button
-                    onClick={() => handleSummarize(unit.unit_number)}
-                    className="bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-white px-4 py-2 rounded-md flex items-center gap-2 transition-all transform hover:scale-105"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    </svg>
-                    Summarize with AI
-                  </button>
-                  <button className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md flex items-center gap-2">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                    Practice Questions
-                  </button>
-                </div>
+            {syllabus.length === 0 ? (
+              <div className="bg-white p-6 rounded-lg shadow-md text-center text-gray-500">
+                No syllabus found for this subject yet.
               </div>
-            ))}
+            ) : (
+              syllabus.map((unit) => (
+                <div key={unit.unit_number} className="bg-white p-6 rounded-lg shadow-md">
+                  <div className="flex items-center mb-4">
+                    <div className="bg-blue-500 text-white rounded-full w-8 h-8 flex items-center justify-center mr-3">
+                      {unit.unit_number}
+                    </div>
+                    <h2 className="text-xl font-semibold">{unit.unit_title}</h2>
+                  </div>
+                  <p className="text-gray-700 ml-11">{unit.content}</p>
+
+                  <div className="mt-4 ml-11 flex gap-2">
+                    <button
+                      onClick={() => {
+                        setSelectedUnit(unit.unit_number);
+                        setShowFlashcards(true);
+                      }}
+                      className="bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white px-4 py-2 rounded-md flex items-center gap-2 transition-all transform hover:scale-105"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                      </svg>
+                      View Flashcards
+                    </button>
+                    <button
+                      onClick={() => handleSummarize(unit.unit_number)}
+                      className="bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 text-white px-4 py-2 rounded-md flex items-center gap-2 transition-all transform hover:scale-105"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
+                      Summarize with AI
+                    </button>
+                    <button className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md flex items-center gap-2">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      Practice Questions
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         ) : activeTab === 'important' ? (
           <div className="space-y-6">
@@ -266,7 +356,7 @@ const Syllabus = () => {
         {/* Flashcard Modal */}
         {showFlashcards && (
           <FlashcardViewer
-            subjectCode={subjectId}
+            subjectCode={subject?.subject_code || subjectId}
             unit={selectedUnit}
             onClose={() => {
               setShowFlashcards(false);
@@ -278,7 +368,7 @@ const Syllabus = () => {
         {/* Subject Chat Modal */}
         {showChat && (
           <SubjectChat
-            subjectCode={subjectId}
+            subjectCode={subject?.subject_code || subjectId}
             subjectName={subjectName}
             onClose={() => setShowChat(false)}
           />

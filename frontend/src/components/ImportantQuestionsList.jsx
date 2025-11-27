@@ -11,7 +11,7 @@ const ImportantQuestionsList = ({ subjectCode }) => {
     useEffect(() => {
         const fetchQuestions = async () => {
             try {
-                let url = `${API_BASE_URL}/api/important-questions/advanced/${subjectCode}`;
+                let url = `${API_BASE_URL}/important-questions/advanced/${subjectCode}`;
                 if (filter !== 'all') {
                     // Simple mapping for demo, ideally backend handles complex filtering
                     if (filter === '1-mark') url += '?marks=1';

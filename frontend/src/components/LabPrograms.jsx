@@ -10,7 +10,7 @@ const LabPrograms = ({ subjectCode }) => {
     useEffect(() => {
         const fetchPrograms = async () => {
             try {
-                const response = await fetch(`${API_BASE_URL}/api/lab-programs/${subjectCode}`);
+                const response = await fetch(`${API_BASE_URL}/lab-programs/${subjectCode}`);
                 const data = await response.json();
                 if (data.programs) {
                     setPrograms(data.programs);

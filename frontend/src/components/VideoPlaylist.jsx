@@ -9,7 +9,7 @@ const VideoPlaylist = ({ subjectCode }) => {
     useEffect(() => {
         const fetchPlaylists = async () => {
             try {
-                const response = await fetch(`${API_BASE_URL}/api/video-playlists/${subjectCode}`);
+                const response = await fetch(`${API_BASE_URL}/video-playlists/${subjectCode}`);
                 const data = await response.json();
                 if (data.playlists) {
                     setPlaylists(data.playlists);

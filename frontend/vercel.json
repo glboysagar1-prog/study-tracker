@@ -6,7 +6,7 @@
         },
         {
             "source": "/agent/(.*)",
-            "destination": "https://gtu-ai-agent.onrender.com/agent/$1"
+            "destination": "https://gtu-ai-agent.onrender.com/$1"
         },
         {
             "source": "/(.*)",

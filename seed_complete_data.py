@@ -67,18 +67,21 @@ for subject in subjects:
         print(f"  ❌ Error with {subject['subject_name']}: {e}")
 
 # ===== STUDY MATERIALS =====
+# We need a map of subject_code to subject_name
+subject_map = {s["subject_code"]: s["subject_name"] for s in subjects}
+
 study_materials = [
     # Basic Electronics
     {"subject_code": "3110005", "title": "Unit 1: Semiconductor Diodes", "material_type": "notes", "description": "PN Junction, Diode characteristics", "unit": 1, "file_url": "https://example.com/be_unit1.pdf"},
     {"subject_code": "3110005", "title": "Unit 2: Transistors", "material_type": "notes", "description": "BJT, FET, MOSFET", "unit": 2, "file_url": "https://example.com/be_unit2.pdf"},
-    {"subject_code": "3110005", "title": "Complete Lab Manual", "material_type": "lab", "description": "All practicals with circuits", "unit": 0, "file_url": "https://example.com/be_lab.pdf"},
+    {"subject_code": "3110005", "title": "Complete Lab Manual", "material_type": "notes", "description": "All practicals with circuits", "unit": 0, "file_url": "https://example.com/be_lab.pdf"}, # Changed type to notes for manual
     {"subject_code": "3110005", "title": "Reference Book: Electronics Fundamentals", "material_type": "book", "description": "Floyd - Electronics Fundamentals", "unit": 0, "file_url": "https://example.com/be_book.pdf"},
     
     # Programming
     {"subject_code": "3110003", "title": "Unit 1: Introduction to C", "material_type": "notes", "description": "Basics of C programming", "unit": 1, "file_url": "https://example.com/c_unit1.pdf"},
     {"subject_code": "3110003", "title": "Unit 2: Control Structures", "material_type": "notes", "description": "If-else, loops, switch", "unit": 2, "file_url": "https://example.com/c_unit2.pdf"},
     {"subject_code": "3110003", "title": "Unit 3: Arrays and Strings", "material_type": "notes", "description": "Array operations, string functions", "unit": 3, "file_url": "https://example.com/c_unit3.pdf"},
-    {"subject_code": "3110003", "title": "Lab Programs Collection", "material_type": "lab", "description": "50+ solved programs", "unit": 0, "file_url": "https://example.com/c_lab.pdf"},
+    {"subject_code": "3110003", "title": "Lab Programs Collection", "material_type": "notes", "description": "50+ solved programs", "unit": 0, "file_url": "https://example.com/c_lab.pdf"}, # Changed type to notes
     
     # Data Structures
     {"subject_code": "3130702", "title": "Unit 1: Introduction to DS", "material_type": "notes", "description": "Arrays, Linked Lists", "unit": 1, "file_url": "https://example.com/ds_unit1.pdf"},
@@ -103,8 +106,47 @@ study_materials = [
 print("\n📖 Inserting study materials...")
 for material in study_materials:
     try:
-        supabase.table("study_materials").insert(material).execute()
-        print(f"  ✅ {material['title']}")
+        if material["material_type"] == "notes":
+            # Insert into 'notes'
+            note_data = {
+                "subject_code": material["subject_code"],
+                "subject_name": subject_map.get(material["subject_code"], ""),
+                "unit": material["unit"],
+                "title": material["title"],
+                "description": material["description"],
+                "file_url": material["file_url"],
+                "source_url": material["file_url"],
+                "source_name": "Seeded Data",
+                "is_verified": True,
+                "downloads": 0,
+                "views": 0
+            }
+            table = "notes"
+            data = note_data
+        else:
+            # Insert into 'reference_materials'
+            ref_data = {
+                "subject_code": material["subject_code"],
+                "subject_name": subject_map.get(material["subject_code"], ""),
+                "material_type": material["material_type"],
+                "title": material["title"],
+                "description": material["description"],
+                "url": material["file_url"], # reference_materials uses 'url'
+                "source_url": material["file_url"],
+                "source_name": "Seeded Data",
+                "rating": 5
+            }
+            table = "reference_materials"
+            data = ref_data
+        
+        # Check if exists
+        existing = supabase.table(table).select("id").eq("title", material["title"]).execute()
+        if not existing.data:
+            supabase.table(table).insert(data).execute()
+            print(f"  ✅ [{table}] {material['title']}")
+        else:
+            print(f"  ⏭️  [{table}] {material['title']} (already exists)")
+            
     except Exception as e:
         print(f"  ⚠️  {material['title']}: {str(e)[:50]}")
 
@@ -120,8 +162,13 @@ video_playlists = [
 print("\n🎥 Inserting video playlists...")
 for playlist in video_playlists:
     try:
-        supabase.table("video_playlists").insert(playlist).execute()
-        print(f"  ✅ {playlist['playlist_name']}")
+        # Check if exists to avoid duplicates if run multiple times
+        existing = supabase.table("video_playlists").select("id").eq("playlist_name", playlist["playlist_name"]).execute()
+        if not existing.data:
+            supabase.table("video_playlists").insert(playlist).execute()
+            print(f"  ✅ {playlist['playlist_name']}")
+        else:
+            print(f"  ⏭️  {playlist['playlist_name']} (already exists)")
     except Exception as e:
         print(f"  ⚠️  {playlist['playlist_name']}: {str(e)[:50]}")
 
@@ -147,8 +194,12 @@ important_questions = [
 print("\n❓ Inserting important questions...")
 for question in important_questions:
     try:
-        supabase.table("important_questions").insert(question).execute()
-        print(f"  ✅ {question['question_text'][:50]}...")
+        existing = supabase.table("important_questions").select("id").eq("question_text", question["question_text"]).execute()
+        if not existing.data:
+            supabase.table("important_questions").insert(question).execute()
+            print(f"  ✅ {question['question_text'][:50]}...")
+        else:
+            print(f"  ⏭️  {question['question_text'][:20]}... (already exists)")
     except Exception as e:
         print(f"  ⚠️  Question: {str(e)[:50]}")
 
@@ -183,7 +234,7 @@ int main() {
     return 0;
 }""",
         "output": "20",
-        "viva_questions": ["What is stack overflow?", "What is LIFO?", "Applications of stack?"],
+        # "viva_questions": ["What is stack overflow?", "What is LIFO?", "Applications of stack?"], # REMOVED: Column missing
         "language": "C"
     },
     {
@@ -209,7 +260,7 @@ struct Node* insert(struct Node* root, int val) {
     return root;
 }""",
         "output": "Inorder: 10 20 30 40 50",
-        "viva_questions": ["What is BST property?", "Time complexity of search?"],
+        # "viva_questions": ["What is BST property?", "Time complexity of search?"], # REMOVED: Column missing
         "language": "C"
     }
 ]
@@ -217,15 +268,19 @@ struct Node* insert(struct Node* root, int val) {
 print("\n💻 Inserting lab programs...")
 for lab in lab_programs:
     try:
-        supabase.table("lab_programs").insert(lab).execute()
-        print(f"  ✅ {lab['program_title']}")
+        existing = supabase.table("lab_programs").select("id").eq("program_title", lab["program_title"]).execute()
+        if not existing.data:
+            supabase.table("lab_programs").insert(lab).execute()
+            print(f"  ✅ {lab['program_title']}")
+        else:
+             print(f"  ⏭️  {lab['program_title']} (already exists)")
     except Exception as e:
         print(f"  ⚠️  {lab['program_title']}: {str(e)[:50]}")
 
 print("\n✨ Data seeding complete!")
 print("\n📊 Summary:")
 print(f"  - {len(subjects)} subjects")
-print(f"  - {len(study_materials)} study materials")
+print(f"  - {len(study_materials)} study materials (notes/books)")
 print(f"  - {len(video_playlists)} video playlists")
 print(f"  - {len(important_questions)} important questions")
 print(f"  - {len(lab_programs)} lab programs")

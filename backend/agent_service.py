@@ -484,6 +484,11 @@ agent = EnhancedGTUAgent(
 
 # ==================== API ENDPOINTS ====================
 
+@app.get("/agent/health")
+async def health_check():
+    """Health check endpoint"""
+    return {"status": "healthy", "timestamp": datetime.now().isoformat()}
+
 @app.post("/agent/chat")
 async def chat_with_agent(user_input: str):
     """Main chat endpoint"""

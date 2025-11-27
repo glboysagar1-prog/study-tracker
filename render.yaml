@@ -1,4 +1,3 @@
-
 services:
   # Flask Backend API
   - type: web
@@ -11,8 +10,6 @@ services:
     envVars:
       - key: FLASK_ENV
         value: production
-      - key: PORT
-        value: 5004
       - key: SUPABASE_URL
         sync: false
       - key: SUPABASE_KEY
@@ -28,8 +25,6 @@ services:
     buildCommand: "pip install -r requirements.txt"
     startCommand: "uvicorn agent:app --host 0.0.0.0 --port $PORT"
     envVars:
-      - key: PORT
-        value: 8001
       - key: BYTEZ_API_KEY
         sync: false
       - key: SUPABASE_URL

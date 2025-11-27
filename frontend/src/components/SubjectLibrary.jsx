@@ -14,23 +14,54 @@ const SubjectLibrary = () => {
     const [activeTab, setActiveTab] = useState('syllabus');
     const [subject, setSubject] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
     const [materials, setMaterials] = useState([]);
 
     // Fetch subject details
     useEffect(() => {
         const fetchSubject = async () => {
             try {
-                const response = await fetch(`${API_BASE_URL}/api/subjects`);
+                setLoading(true);
+                setError(null);
+                
+                // Validate subjectId
+                if (!subjectId) {
+                    setError("No subject ID provided");
+                    setLoading(false);
+                    return;
+                }
+                
+                // Fetch specific subject by ID instead of fetching all and filtering
+                const response = await fetch(`${API_BASE_URL}/subjects/${subjectId}`);
+                
+                // Check if response is OK
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
                 const data = await response.json();
-                const currentSubject = data.subjects.find(s => s.id === parseInt(subjectId));
-                setSubject(currentSubject);
+                
+                if (data.subject) {
+                    setSubject(data.subject);
+                } else if (data.error) {
+                    setError(data.error);
+                } else {
+                    setError("Subject not found");
+                }
             } catch (error) {
                 console.error("Error fetching subject:", error);
+                setError(`Failed to load subject: ${error.message}`);
             } finally {
                 setLoading(false);
             }
         };
-        fetchSubject();
+        
+        if (subjectId) {
+            fetchSubject();
+        } else {
+            setLoading(false);
+            setError("No subject ID provided in URL");
+        }
     }, [subjectId]);
 
     // Fetch materials when tab changes (for notes/books)
@@ -40,7 +71,7 @@ const SubjectLibrary = () => {
 
             if (['notes', 'book', 'ppt'].includes(activeTab)) {
                 try {
-                    const response = await fetch(`${API_BASE_URL}/api/study-materials/advanced/${subject.subject_code}?type=${activeTab}`);
+                    const response = await fetch(`${API_BASE_URL}/study-materials/advanced/${subject.subject_code}?type=${activeTab}`);
                     const data = await response.json();
                     if (data.materials) {
                         setMaterials(data.materials);
@@ -66,7 +97,7 @@ const SubjectLibrary = () => {
         // Mock user ID for now
         const userId = "00000000-0000-0000-0000-000000000000";
         try {
-            await fetch(`${API_BASE_URL}/api/bookmarks`, {
+            await fetch(`${API_BASE_URL}/bookmarks`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ user_id: userId, material_id: materialId })
@@ -78,6 +109,30 @@ const SubjectLibrary = () => {
     };
 
     if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+    
+    if (error) {
+        return (
+            <div className="min-h-screen flex items-center justify-center">
+                <div className="bg-white p-8 rounded-lg shadow-md max-w-2xl">
+                    <div className="flex items-center mb-4">
+                        <svg className="w-6 h-6 text-red-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <h2 className="text-2xl font-bold text-gray-800">Error Loading Subject</h2>
+                    </div>
+                    <p className="text-gray-600 mb-4">{error}</p>
+                    <p className="text-gray-500 text-sm mb-4">Subject ID: {subjectId}</p>
+                    <p className="text-gray-500 text-sm">API Base URL: {API_BASE_URL}</p>
+                    <div className="mt-6">
+                        <Link to="/subjects" className="text-blue-500 hover:text-blue-700 font-medium">
+                            ← Back to Subjects
+                        </Link>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+    
     if (!subject) return <div className="min-h-screen flex items-center justify-center">Subject not found</div>;
 
     const tabs = [

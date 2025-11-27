@@ -19,7 +19,7 @@ const SyllabusViewer = ({ subjectCode }) => {
     useEffect(() => {
         const fetchSyllabusDetails = async () => {
             try {
-                const response = await fetch(`${API_BASE_URL}/api/syllabus/details/${subjectCode}`);
+                const response = await fetch(`${API_BASE_URL}/syllabus/details/${subjectCode}`);
                 const data = await response.json();
 
                 if (data.error) {
@@ -48,7 +48,7 @@ const SyllabusViewer = ({ subjectCode }) => {
         e.stopPropagation(); // Prevent toggling accordion
         setSummaryModal({ show: true, content: '', loading: true, unit: unitNumber });
         try {
-            const response = await fetch(`${API_BASE_URL}/api/summarize-unit`, {
+            const response = await fetch(`${API_BASE_URL}/summarize-unit`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

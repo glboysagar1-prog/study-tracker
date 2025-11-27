@@ -13,8 +13,11 @@ from backend.app import create_app
 def main():
     app = create_app()
     
+    # Use PORT environment variable for Render, default to 5004 for local development
+    port = int(os.environ.get('PORT', 5004))
+    
     # Run the app
-    app.run(host='0.0.0.0', port=5004, debug=True)
+    app.run(host='0.0.0.0', port=port, debug=False)
 
 if __name__ == '__main__':
     main()
