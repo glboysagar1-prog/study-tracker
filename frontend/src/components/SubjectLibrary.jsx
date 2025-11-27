@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import MaterialCard from './MaterialCard';
 import VideoPlaylist from './VideoPlaylist';
 import LabPrograms from './LabPrograms';
@@ -11,6 +11,7 @@ import { API_BASE_URL } from '../config/api';
 
 const SubjectLibrary = () => {
     const { subjectId } = useParams();
+    const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('syllabus');
     const [subject, setSubject] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -25,28 +26,54 @@ const SubjectLibrary = () => {
                 setError(null);
                 
                 // Validate subjectId
+                console.log("Subject ID from useParams:", subjectId);
+                console.log("Type of subjectId:", typeof subjectId);
+                
                 if (!subjectId) {
                     setError("No subject ID provided");
                     setLoading(false);
                     return;
                 }
                 
+                // Check if subjectId is a valid number
+                const numericSubjectId = parseInt(subjectId, 10);
+                console.log("Parsed numericSubjectId:", numericSubjectId);
+                console.log("Is NaN:", isNaN(numericSubjectId));
+                
+                if (isNaN(numericSubjectId)) {
+                    setError(`Invalid subject ID: ${subjectId}`);
+                    setLoading(false);
+                    return;
+                }
+                
+                console.log(`Fetching subject with ID: ${numericSubjectId}`);
+                
                 // Fetch specific subject by ID instead of fetching all and filtering
-                const response = await fetch(`${API_BASE_URL}/subjects/${subjectId}`);
+                const response = await fetch(`${API_BASE_URL}/subjects/${numericSubjectId}`);
                 
                 // Check if response is OK
+                console.log("Response status:", response.status);
                 if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                    const errorText = await response.text();
+                    console.error(`HTTP error! status: ${response.status}`, errorText);
+                    if (response.status === 404) {
+                        setError(`Subject with ID ${numericSubjectId} not found in database`);
+                    } else {
+                        setError(`HTTP error! status: ${response.status}`);
+                    }
+                    setLoading(false);
+                    return;
                 }
                 
                 const data = await response.json();
+                console.log("Subject data received:", data);
                 
                 if (data.subject) {
                     setSubject(data.subject);
                 } else if (data.error) {
                     setError(data.error);
                 } else {
-                    setError("Subject not found");
+                    setError("Subject not found in response data");
                 }
             } catch (error) {
                 console.error("Error fetching subject:", error);
@@ -56,6 +83,7 @@ const SubjectLibrary = () => {
             }
         };
         
+        console.log("useEffect triggered with subjectId:", subjectId);
         if (subjectId) {
             fetchSubject();
         } else {
@@ -123,10 +151,19 @@ const SubjectLibrary = () => {
                     <p className="text-gray-600 mb-4">{error}</p>
                     <p className="text-gray-500 text-sm mb-4">Subject ID: {subjectId}</p>
                     <p className="text-gray-500 text-sm">API Base URL: {API_BASE_URL}</p>
-                    <div className="mt-6">
-                        <Link to="/subjects" className="text-blue-500 hover:text-blue-700 font-medium">
+                    <div className="mt-6 flex gap-4">
+                        <button 
+                            onClick={() => navigate('/subjects')}
+                            className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
+                        >
                             ← Back to Subjects
-                        </Link>
+                        </button>
+                        <button 
+                            onClick={() => window.location.reload()}
+                            className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600"
+                        >
+                            Reload Page
+                        </button>
                     </div>
                 </div>
             </div>
