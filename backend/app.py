@@ -15,19 +15,17 @@ def create_app():
     print(f"DEBUG: FLASK_ENV is {flask_env}")
     
     if flask_env == 'production':
-        # Production origins - Allow all for Vercel deployments
-        print("DEBUG: Starting in production mode with CORS allowing all origins")
-        CORS(app, resources={
-            r"/api/*": {"origins": "*"},
-            r"/auth/*": {"origins": "*"}
-        })
+        # Production origins - Allow all Vercel deployments
+        print(f"DEBUG: Starting in production mode with CORS allowing all origins")
+        CORS(app, 
+             resources={r"/*": {"origins": "*"}},
+             allow_headers=["Content-Type", "Authorization"],
+             methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+             supports_credentials=False)
     else:
-        # Development origins - Allow all for development
+        # Allow all origins in development
         print(f"DEBUG: Starting in {flask_env} mode with CORS allowing all origins")
-        CORS(app, resources={
-            r"/api/*": {"origins": "*"},
-            r"/auth/*": {"origins": "*"}
-        })
+        CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
     
     # Load configuration
     from .config import Config
