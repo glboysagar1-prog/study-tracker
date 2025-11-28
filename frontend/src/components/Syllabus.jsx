@@ -37,11 +37,11 @@ const Syllabus = () => {
           throw new Error(`Failed to fetch subject: ${subjectResponse.status}`);
         }
         const subjectData = await subjectResponse.json();
-        
+
         if (subjectData.error) {
           throw new Error(subjectData.error);
         }
-        
+
         setSubject(subjectData.subject);
         setSubjectName(subjectData.subject.subject_name);
 
@@ -298,23 +298,35 @@ const Syllabus = () => {
                 No study materials found for this subject yet.
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {studyMaterials.map((m) => (
-                  <div key={m.id} className="bg-white p-6 rounded-lg shadow-md border-t-4 border-green-500">
-                    <div className="flex justify-between items-start mb-4">
-                      <h3 className="text-xl font-semibold text-gray-800">{m.title}</h3>
-                      <span className="bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded capitalize">
-                        {m.material_type}
-                      </span>
+                  <div key={m.id} className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow border-l-4 border-blue-500">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-center gap-2">
+                        <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        {m.unit && (
+                          <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-0.5 rounded">
+                            Unit {m.unit}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    <p className="text-gray-600 mb-4 line-clamp-3">{m.content.substring(0, 150)}...</p>
+                    <h3 className="text-lg font-semibold text-gray-800 mb-3 line-clamp-2">{m.title}</h3>
+                    {m.description && (
+                      <p className="text-gray-600 text-sm mb-4 line-clamp-2">{m.description}</p>
+                    )}
                     <a
                       href={m.content}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-block bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md text-sm font-medium"
+                      className="inline-flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors w-full justify-center"
                     >
-                      View Material
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      Download PDF
                     </a>
                   </div>
                 ))}

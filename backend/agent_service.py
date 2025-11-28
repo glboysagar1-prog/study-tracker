@@ -401,7 +401,26 @@ Improvement areas:
         return f"Scraping syllabus for {subject_code}..."
     
     def generate_pdf_notes(self, subject_code, unit_number):
-        return f"Generating PDF notes for {subject_code} Unit {unit_number}..."
+        print(f"  📄 Generating PDF notes for {subject_code} Unit {unit_number}...")
+        try:
+            # Import here to avoid circular imports if any
+            from backend.pdf_generator import generate_unit_pdf
+            
+            # Convert unit_number to int if it's a string
+            try:
+                unit_number = int(unit_number)
+            except:
+                pass
+                
+            result = generate_unit_pdf(subject_code, unit_number)
+            
+            if result.get("success"):
+                return f"✅ PDF Generated Successfully!\nTitle: {result['title']}\nLink: {result['pdf_url']}"
+            else:
+                return f"❌ Failed to generate PDF: {result.get('error')}"
+        except Exception as e:
+            print(f"Error in generate_pdf_notes: {e}")
+            return f"❌ Error: {str(e)}"
     
     def search_study_materials(self, query):
         return f"Searching for: {query}..."

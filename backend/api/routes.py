@@ -641,9 +641,23 @@ def get_update_by_id(update_id):
 
 @api_bp.route('/study-materials/<int:subject_id>')
 def get_study_materials(subject_id):
-    """Get study materials for a subject"""
+    """Get study materials for a subject - Returns only AI-generated PDFs"""
     try:
-        response = supabase.table("study_materials").select("*").eq("subject_id", subject_id).execute()
+        # First get subject_code from subject_id
+        subject_response = supabase.table("subjects").select("subject_code").eq("id", subject_id).execute()
+        
+        if not subject_response.data:
+            return jsonify({'materials': []})
+        
+        subject_code = subject_response.data[0]['subject_code']
+        
+        # Fetch only AI-generated notes (source_name = "AI-Generated (GTU Exam Prep)")
+        response = supabase.table("notes").select("*")\
+            .eq("subject_code", subject_code)\
+            .eq("source_name", "AI-Generated (GTU Exam Prep)")\
+            .order("unit")\
+            .execute()
+        
         materials = []
         if response.data:
             for m in response.data:
@@ -651,9 +665,13 @@ def get_study_materials(subject_id):
                     materials.append({
                         'id': m.get("id", 0),
                         'title': m.get("title", ""),
-                        'content': m.get("content", ""), # URL or text
-                        'material_type': m.get("material_type", "notes"),
-                        'created_at': m.get("created_at", "")
+                        'content': m.get("file_url", ""),  # URL to PDF
+                        'material_type': 'notes',  # Keep consistent with frontend
+                        'created_at': m.get("created_at", ""),
+                        'unit': m.get("unit"),
+                        'description': m.get("description", ""),
+                        'downloads': m.get("downloads", 0),
+                        'views': m.get("views", 0)
                     })
         return jsonify({'materials': materials})
     except Exception as e:

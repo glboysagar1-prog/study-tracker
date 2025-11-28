@@ -10,22 +10,11 @@ load_dotenv()
 def create_app():
     app = Flask(__name__)
     
-    # Determine allowed origins based on environment
-    flask_env = os.getenv('FLASK_ENV', 'development')
-    print(f"DEBUG: FLASK_ENV is {flask_env}")
-    
-    if flask_env == 'production':
-        # Production origins - Allow all Vercel deployments
-        print(f"DEBUG: Starting in production mode with CORS allowing all origins")
-        CORS(app, 
-             resources={r"/*": {"origins": "*"}},
-             allow_headers=["Content-Type", "Authorization"],
-             methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-             supports_credentials=False)
-    else:
-        # Allow all origins in development
-        print(f"DEBUG: Starting in {flask_env} mode with CORS allowing all origins")
-        CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
+    # Configure CORS to allow all origins for API and auth routes
+    CORS(app, resources={
+        r"/api/*": {"origins": "*"},
+        r"/auth/*": {"origins": "*"}
+    })
     
     # Load configuration
     from .config import Config
@@ -74,4 +63,4 @@ def create_app():
 app = create_app()
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, port=5001)

@@ -57,23 +57,33 @@ class AIProcessor:
             # Generate response
             logger.info("Calling Bytez API...")
             result = model.run(messages)
-            logger.info(f"Bytez API returned: {type(result)}")
+            logger.info(f"Bytez API returned result type: {type(result)}")
             
-            # Handle different return types
-            # Bytez might return a tuple (output, error) or just output
-            if isinstance(result, tuple) and len(result) >= 2:
-                output, error = result[0], result[1]
-                if error:
-                    logger.error(f"Bytez API returned error: {error}")
-                    raise Exception(f"Bytez GPT-4o error: {error}")
+            # Bytez returns a Response object with .output and .error attributes
+            if hasattr(result, 'error') and result.error:
+                logger.error(f"Bytez API returned error: {result.error}")
+                raise Exception(f"Bytez GPT-4o error: {result.error}")
+            
+            if hasattr(result, 'output'):
+                output = result.output
             else:
                 output = result
             
             # Extract response text from output
-            if isinstance(output, dict) and 'choices' in output and len(output['choices']) > 0:
-                return output['choices'][0]['message']['content']
-            elif isinstance(output, dict) and 'text' in output:
-                return output['text']
+            if isinstance(output, dict):
+                # Try various dict structures
+                if 'choices' in output and len(output['choices']) > 0:
+                    choice = output['choices'][0]
+                    if isinstance(choice, dict) and 'message' in choice:
+                        return choice['message'].get('content', str(output))
+                    return str(choice)
+                elif 'content' in output:
+                    return output['content']
+                elif 'text' in output:
+                    return output['text']
+                else:
+                    # Return the whole dict as string if we can't find content
+                    return str(output)
             elif isinstance(output, str):
                 return output
             else:
