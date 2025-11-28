@@ -1,9 +1,14 @@
 // API Base URL - can be overridden by environment variable
+// Updated to work with Render backend on port 5000
 const getApiBaseUrl = () => {
     // Check if we have an explicit VITE_API_URL environment variable
     if (import.meta.env.VITE_API_URL) {
-        // VITE_API_URL should already include /api, so return it as is
-        return import.meta.env.VITE_API_URL;
+        let url = import.meta.env.VITE_API_URL;
+        // Ensure it ends with /api if it doesn't already
+        if (!url.endsWith('/api')) {
+            url = `${url}/api`;
+        }
+        return url;
     }
 
     // In production (deployed), use relative URL so Vercel rewrites work
@@ -12,8 +17,7 @@ const getApiBaseUrl = () => {
         return '/api';
     }
 
-    // For development, use the correct local backend port (5004 based on our setup)
-    return 'http://localhost:5004/api';
+    return 'http://localhost:5000/api';
 };
 
 export const API_BASE_URL = getApiBaseUrl();
