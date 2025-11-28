@@ -8,6 +8,7 @@ const SyllabusViewer = ({ subjectCode }) => {
     const [error, setError] = useState(null);
     const [expandedUnits, setExpandedUnits] = useState({});
     const [summaryModal, setSummaryModal] = useState({ show: false, content: '', loading: false, unit: null });
+    const [pdfGeneration, setPdfGeneration] = useState({ loading: false, unit: null });
 
     const toggleUnit = (unitNumber) => {
         setExpandedUnits(prev => ({
@@ -67,6 +68,43 @@ const SyllabusViewer = ({ subjectCode }) => {
         } catch (error) {
             console.error('Error summarizing unit:', error);
             setSummaryModal(prev => ({ ...prev, content: 'Error connecting to server.', loading: false }));
+        }
+    };
+
+    const handleGeneratePDF = async (e, unitNumber) => {
+        e.stopPropagation(); // Prevent toggling accordion
+        setPdfGeneration({ loading: true, unit: unitNumber });
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/generate-unit-pdf`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    subject_code: subjectCode,
+                    unit_number: unitNumber,
+                }),
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                // Refresh syllabus data to show the new PDF
+                const syllabusResponse = await fetch(`${API_BASE_URL}/syllabus/details/${subjectCode}`);
+                const syllabusData = await syllabusResponse.json();
+                setSyllabusData(syllabusData);
+
+                // Show success message
+                alert(`PDF generated successfully! "${data.title}" is now available in Study Notes.`);
+            } else {
+                alert(`Failed to generate PDF: ${data.error || 'Unknown error'}`);
+            }
+        } catch (error) {
+            console.error('Error generating PDF:', error);
+            alert('Error generating PDF. Please try again.');
+        } finally {
+            setPdfGeneration({ loading: false, unit: null });
         }
     };
 
@@ -137,24 +175,60 @@ const SyllabusViewer = ({ subjectCode }) => {
                             {/* Notes Section */}
                             {unit.notes.length > 0 && (
                                 <div>
-                                    <h4 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
-                                        <span>📝 Study Notes</span>
-                                        <span className="bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded-full">{unit.notes.length}</span>
-                                    </h4>
+                                    <div className="flex justify-between items-center mb-3">
+                                        <h4 className="text-sm font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2">
+                                            <span>📝 Study Notes</span>
+                                            <span className="bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded-full">{unit.notes.length}</span>
+                                        </h4>
+                                        <button
+                                            onClick={(e) => handleGeneratePDF(e, unit.unit)}
+                                            disabled={pdfGeneration.loading && pdfGeneration.unit === unit.unit}
+                                            className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white px-3 py-1.5 rounded-md flex items-center gap-1.5 text-xs transition-all transform hover:scale-105 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                                        >
+                                            {pdfGeneration.loading && pdfGeneration.unit === unit.unit ? (
+                                                <>
+                                                    <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                    </svg>
+                                                    Generating...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                                    </svg>
+                                                    Generate AI PDF
+                                                </>
+                                            )}
+                                        </button>
+                                    </div>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         {unit.notes.map((note) => (
-                                            <div key={note.id} className="border border-gray-200 rounded-lg p-3 hover:border-blue-300 transition-colors">
-                                                <div className="font-medium text-blue-700 mb-1">{note.title}</div>
+                                            <div key={note.id} className="border border-gray-200 rounded-lg p-3 hover:border-blue-300 transition-colors bg-white">
+                                                <div className="flex items-start justify-between gap-2 mb-1">
+                                                    <div className="font-medium text-blue-700 text-sm">{note.title}</div>
+                                                    {note.source_name === 'AI-Generated (GTU Exam Prep)' && (
+                                                        <span className="bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 text-xs px-2 py-0.5 rounded-full font-semibold whitespace-nowrap">
+                                                            ✨ AI
+                                                        </span>
+                                                    )}
+                                                </div>
                                                 <div className="text-xs text-gray-500 mb-2 line-clamp-2">{note.description}</div>
                                                 <div className="flex justify-between items-center">
-                                                    <span className="text-xs text-gray-400">{new Date(note.created_at).toLocaleDateString()}</span>
+                                                    <span className="text-xs text-gray-400">
+                                                        {note.source_name}
+                                                    </span>
                                                     {note.file_url && (
                                                         <a
                                                             href={note.file_url}
                                                             target="_blank"
                                                             rel="noopener noreferrer"
-                                                            className="text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded hover:bg-blue-100"
+                                                            className="text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded hover:bg-blue-100 flex items-center gap-1"
                                                         >
+                                                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                                            </svg>
                                                             View PDF
                                                         </a>
                                                     )}

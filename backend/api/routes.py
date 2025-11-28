@@ -876,7 +876,6 @@ def submit_rating():
         user_id = data.get('user_id')
         material_id = data.get('material_id')
         rating = data.get('rating')
-        
         if not all([user_id, material_id, rating]):
             return jsonify({'error': 'Missing required fields'}), 400
             
@@ -889,6 +888,35 @@ def submit_rating():
         return jsonify({'success': True, 'message': 'Rating submitted'})
     except Exception as e:
         return jsonify({'error': f'Rating failed: {str(e)}'}), 500
+
+@api_bp.route('/generate-unit-pdf', methods=['POST'])
+def generate_unit_pdf_endpoint():
+    """
+    Generate AI-powered comprehensive PDF study guide for a unit
+    """
+    try:
+        from backend.pdf_generator import generate_unit_pdf
+        
+        data = request.get_json()
+        subject_code = data.get('subject_code')
+        unit_number = data.get('unit_number')
+        
+        if not subject_code or not unit_number:
+            return jsonify({'error': 'subject_code and unit_number are required'}), 400
+        
+        # Generate the PDF
+        result = generate_unit_pdf(subject_code, int(unit_number))
+        
+        if result.get('success'):
+            return jsonify(result), 200
+        else:
+            return jsonify(result), 500
+            
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': f'PDF generation failed: {str(e)}'}), 500
+
 
 # ============================================================================
 # STUDY MATERIAL AGGREGATION ENDPOINTS
