@@ -255,6 +255,10 @@ Generate all {count} cards now."""
         print(f"  🔮 Predicting semester paper for subject ID: {subject_id}...")
         
         try:
+            # Check if LLM is available
+            if not self.llm:
+                return {"error": "AI service not available. Please ensure BYTEZ_API_KEY is configured."}
+            
             # Get subject info
             if not self.supabase:
                 return {"error": "Database not available"}
@@ -323,6 +327,10 @@ Generate 15-20 question parts covering all units. Mark 5-7 as "High" probability
     def generate_gtu_answer(self, question, subject_id=None):
         """Generate a perfect GTU-style answer for a question"""
         print(f"  ✍️ Generating answer for: {question[:50]}...")
+        
+        # Check if LLM is available
+        if not self.llm:
+            return {"error": "AI service not available. Please ensure BYTEZ_API_KEY is configured."}
         
         prompt = f"""Generate a perfect GTU exam answer for this question:
 "{question}"
