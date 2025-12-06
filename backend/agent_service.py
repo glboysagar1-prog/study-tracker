@@ -248,7 +248,109 @@ Generate all {count} cards now."""
         
         return f"🗂️ Generated {len(flashcards)} flashcards for {topic}\n\n{flashcards_text}"
     
-    # ==================== NEW TOOL: VOICE INTERACTION ====================
+    # ==================== PREDICT SEMESTER PAPER ====================
+    
+    def predict_semester_paper(self, subject_id):
+        """Predict a GTU semester paper by analyzing patterns"""
+        print(f"  🔮 Predicting semester paper for subject ID: {subject_id}...")
+        
+        try:
+            # Get subject info
+            if not self.supabase:
+                return {"error": "Database not available"}
+            
+            subject_resp = self.supabase.table("subjects").select("*").eq("id", subject_id).execute()
+            subject = subject_resp.data[0] if subject_resp.data else None
+            subject_name = subject.get("subject_name", "Unknown") if subject else "Unknown"
+            
+            # Get previous papers info
+            papers_resp = self.supabase.table("previous_papers").select("*").eq("subject_id", subject_id).execute()
+            papers = papers_resp.data or []
+            
+            papers_info = ""
+            for p in papers:
+                papers_info += f"- {p.get('year')} {p.get('exam_type')}\n"
+            
+            prompt = f"""You are a GTU exam paper predictor. Analyze patterns and generate a predicted exam paper.
+
+Subject: {subject_name}
+Available Previous Papers:
+{papers_info if papers_info else "No specific papers available, use general GTU patterns."}
+
+Generate a PREDICTED GTU EXAM PAPER (70 Marks total) with these requirements:
+1. Follow standard GTU format: Q1-Q5, each with (a), (b), (c) parts
+2. For EACH question part, identify the likely Unit and Chapter
+3. Mark high-probability questions based on GTU patterns
+4. Output in JSON format
+
+JSON Structure:
+{{
+  "subject_name": "{subject_name}",
+  "questions": [
+    {{
+      "q_number": "1(a)",
+      "question": "Question text here",
+      "marks": 3,
+      "unit": "Unit 1",
+      "chapter": "Introduction",
+      "probability": "High"
+    }},
+    {{
+      "q_number": "1(b)",
+      "question": "Another question",
+      "marks": 4,
+      "unit": "Unit 1", 
+      "chapter": "Basics",
+      "probability": "Medium"
+    }}
+  ]
+}}
+
+Generate 15-20 question parts covering all units. Mark 5-7 as "High" probability."""
+
+            messages = [{"role": "user", "content": prompt}]
+            response = self.llm.run(messages)
+            
+            if response.error:
+                return {"error": str(response.error)}
+            
+            return self._extract_json(response.output)
+            
+        except Exception as e:
+            print(f"Error predicting paper: {e}")
+            return {"error": str(e)}
+    
+    def generate_gtu_answer(self, question, subject_id=None):
+        """Generate a perfect GTU-style answer for a question"""
+        print(f"  ✍️ Generating answer for: {question[:50]}...")
+        
+        prompt = f"""Generate a perfect GTU exam answer for this question:
+"{question}"
+
+Requirements:
+1. Point-wise answer (GTU gives marks per point)
+2. Include diagram description if applicable
+3. Identify the Unit and Chapter
+4. Keep it exam-appropriate length (suitable for the marks)
+
+Output as JSON:
+{{
+  "answer": "Your detailed point-wise answer here...",
+  "unit": "Unit X",
+  "chapter": "Chapter Name",
+  "diagram_suggestion": "Description of diagram to draw (or null if not needed)"
+}}"""
+
+        try:
+            messages = [{"role": "user", "content": prompt}]
+            response = self.llm.run(messages)
+            
+            if response.error:
+                return {"error": str(response.error)}
+            
+            return self._extract_json(response.output)
+        except Exception as e:
+            return {"error": str(e)}
     
     def voice_interaction(self, audio_text):
         """Handle voice-transcribed queries"""

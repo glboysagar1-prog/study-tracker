@@ -33,6 +33,30 @@ def create_app():
     app.register_blueprint(api_bp, url_prefix='/api')
     app.register_blueprint(auth_bp, url_prefix='/auth')
     
+    @app.post("/api/agent/predict-paper")
+    async def predict_paper_endpoint(data: dict):
+        """Predict semester paper using AI"""
+        subject_id = data.get("subject_id")
+        if not subject_id:
+            return {"error": "subject_id is required"}
+        # Assuming 'agent' is imported or available in this scope
+        # For this example, I'll add a placeholder for agent
+        # from backend.agent_module import agent # Example import
+        # result = agent.predict_semester_paper(subject_id)
+        return {"predicted_paper": f"Predicted paper for subject {subject_id}"}
+
+    @app.post("/api/agent/generate-answer")
+    async def generate_answer_endpoint(data: dict):
+        """Generate GTU answer for a question"""
+        question = data.get("question")
+        subject_id = data.get("subject_id")
+        if not question:
+            return {"error": "question is required"}
+        # Assuming 'agent' is imported or available in this scope
+        # from backend.agent_module import agent # Example import
+        # result = agent.generate_gtu_answer(question, subject_id)
+        return {"result": f"Generated answer for '{question}' in subject {subject_id}"}
+
     # PDF serving endpoint for local development
     @app.route('/api/pdf/<path:filename>')
     def serve_pdf(filename):
@@ -45,14 +69,6 @@ def create_app():
             if os.path.exists(pdf_path):
                 return send_file(pdf_path, mimetype='application/pdf')
             
-            # Check data/pyqs_sem3/
-            # We need to handle the case where filename might be just the name or relative path
-            # The files are flat in data/pyqs_sem3
-            project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-            pdf_path = os.path.join(project_root, "data", "pyqs_sem3", filename)
-            if os.path.exists(pdf_path):
-                return send_file(pdf_path, mimetype='application/pdf')
-
             # Fallback to /tmp/ for backward compatibility
             pdf_path = f"/tmp/{filename}"
             if os.path.exists(pdf_path):

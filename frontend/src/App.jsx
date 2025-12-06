@@ -27,6 +27,7 @@ import AllPreviousPapers from './components/AllPreviousPapers';
 import AllImportantQuestions from './components/AllImportantQuestions';
 import AllLabPrograms from './components/AllLabPrograms';
 import AllVideoTutorials from './components/AllVideoTutorials';
+import PrepareExam from './components/PrepareExam';
 
 // Wrapper component for MaterialViewer to extract subjectCode from URL
 function MaterialViewerWrapper() {
@@ -65,6 +66,7 @@ function App() {
         <Route path="/important-questions/:subjectId" element={<AppLayout><ImportantQuestions /></AppLayout>} />
         <Route path="/voice-assistant" element={<AppLayout><VoiceAssistant /></AppLayout>} />
         <Route path="/ai-assistant" element={<AppLayout><AIStudyAssistant /></AppLayout>} />
+        <Route path="/prepare-exam" element={<AppLayout><PrepareExam /></AppLayout>} />
         <Route path="/upload-material" element={<AppLayout><MaterialUploadForm /></AppLayout>} />
         <Route path="/browse" element={<AppLayout><SubjectBrowser /></AppLayout>} />
         <Route path="/materials/:subjectCode" element={<AppLayout><MaterialViewerWrapper /></AppLayout>} />
