@@ -70,6 +70,16 @@ class EnhancedGTUAgent:
         """Enhanced reasoning with better prompt engineering"""
         print("\n🧠 Agent is thinking...")
         
+        # Check if LLM is available
+        if not self.llm:
+            print("⚠️ LLM not available - returning fallback response")
+            return {
+                "action": "answer_question",
+                "parameters": {"question": user_input},
+                "reasoning": "Direct answer mode - AI service not configured",
+                "confidence": 0.5
+            }
+        
         # Improved prompt with few-shot examples
         prompt = f"""You are an intelligent GTU study assistant. Analyze the request and choose the best action.
 
@@ -536,7 +546,29 @@ Improvement areas:
         return f"Searching for: {query}..."
     
     def answer_study_question(self, question):
-        return f"Answering: {question}..."
+        """Answer study questions - fallback when main AI is unavailable"""
+        if self.llm:
+            # Use AI to answer
+            try:
+                messages = [{"role": "user", "content": f"Answer this GTU exam question concisely: {question}"}]
+                response = self.llm.run(messages)
+                if not response.error:
+                    return response.output
+            except:
+                pass
+        
+        # Fallback response
+        return f"""📚 **Your Question:** {question}
+
+I'm currently in offline mode (AI service not configured). Here's what I suggest:
+
+1. **Check Study Materials** - Browse the Syllabus section for relevant notes
+2. **Previous Year Papers** - Similar questions may have appeared before  
+3. **Video Tutorials** - Watch explanations in the Video section
+
+💡 **Tip:** Search for key terms from your question in the Study Materials.
+
+To enable AI answers, please configure the BYTEZ_API_KEY in your environment."""
     
     def create_practice_quiz(self, topic, difficulty="medium"):
         return f"Creating {difficulty} quiz for {topic}..."
