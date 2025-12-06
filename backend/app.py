@@ -34,28 +34,33 @@ def create_app():
     app.register_blueprint(auth_bp, url_prefix='/auth')
     
     @app.post("/api/agent/predict-paper")
-    async def predict_paper_endpoint(data: dict):
+    def predict_paper_endpoint():
         """Predict semester paper using AI"""
+        from flask import request
+        data = request.get_json()
         subject_id = data.get("subject_id")
         if not subject_id:
-            return {"error": "subject_id is required"}
-        # Assuming 'agent' is imported or available in this scope
-        # For this example, I'll add a placeholder for agent
-        # from backend.agent_module import agent # Example import
-        # result = agent.predict_semester_paper(subject_id)
-        return {"predicted_paper": f"Predicted paper for subject {subject_id}"}
+            return {"error": "subject_id is required"}, 400
+        
+        # Import and use the agent from agent_service
+        from backend.agent_service import agent
+        result = agent.predict_semester_paper(subject_id)
+        return {"predicted_paper": result}
 
     @app.post("/api/agent/generate-answer")
-    async def generate_answer_endpoint(data: dict):
+    def generate_answer_endpoint():
         """Generate GTU answer for a question"""
+        from flask import request
+        data = request.get_json()
         question = data.get("question")
         subject_id = data.get("subject_id")
         if not question:
-            return {"error": "question is required"}
-        # Assuming 'agent' is imported or available in this scope
-        # from backend.agent_module import agent # Example import
-        # result = agent.generate_gtu_answer(question, subject_id)
-        return {"result": f"Generated answer for '{question}' in subject {subject_id}"}
+            return {"error": "question is required"}, 400
+        
+        # Import and use the agent from agent_service
+        from backend.agent_service import agent
+        result = agent.generate_gtu_answer(question, subject_id)
+        return {"result": result}
 
     # PDF serving endpoint for local development
     @app.route('/api/pdf/<path:filename>')
