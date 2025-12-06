@@ -45,6 +45,14 @@ def create_app():
             if os.path.exists(pdf_path):
                 return send_file(pdf_path, mimetype='application/pdf')
             
+            # Check data/pyqs_sem3/
+            # We need to handle the case where filename might be just the name or relative path
+            # The files are flat in data/pyqs_sem3
+            project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            pdf_path = os.path.join(project_root, "data", "pyqs_sem3", filename)
+            if os.path.exists(pdf_path):
+                return send_file(pdf_path, mimetype='application/pdf')
+
             # Fallback to /tmp/ for backward compatibility
             pdf_path = f"/tmp/{filename}"
             if os.path.exists(pdf_path):
