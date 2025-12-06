@@ -97,6 +97,34 @@ export const SUBJECT_URL_MAP = {
         swayam: 'https://swayam.gov.in/explorer?searchText=java',
         reddit: 'https://www.reddit.com/search/?q=java%20gtu',
         stackoverflow: 'https://stackoverflow.com/search?q=java'
+    },
+    'Digital Logic Design': {
+        geeksforgeeks: 'https://www.geeksforgeeks.org/digital-electronics-logic-design-tutorials/',
+        tutorialspoint: 'https://www.tutorialspoint.com/digital_circuits/index.htm',
+        javatpoint: 'https://www.javatpoint.com/digital-electronics',
+        sanfoundry: 'https://www.sanfoundry.com/digital-electronics-questions-answers-mcqs/',
+        nptel: 'https://nptel.ac.in/courses/108105132',
+        coursera: 'https://www.coursera.org/search?query=digital%20logic',
+        edx: 'https://www.edx.org/search?q=digital+logic',
+        reddit: 'https://www.reddit.com/search/?q=digital%20logic%20design',
+        stackoverflow: 'https://stackoverflow.com/search?q=digital+logic'
+    },
+    'Digital Fundamentals': {
+        geeksforgeeks: 'https://www.geeksforgeeks.org/digital-electronics-logic-design-tutorials/',
+        tutorialspoint: 'https://www.tutorialspoint.com/digital_circuits/index.htm',
+        javatpoint: 'https://www.javatpoint.com/digital-electronics',
+        sanfoundry: 'https://www.sanfoundry.com/digital-electronics-questions-answers-mcqs/',
+        nptel: 'https://nptel.ac.in/courses/108105132'
+    },
+    'Probability and Statistics': {
+        geeksforgeeks: 'https://www.geeksforgeeks.org/engineering-mathematics-tutorials/',
+        tutorialspoint: 'https://www.tutorialspoint.com/statistics/index.htm',
+        sanfoundry: 'https://www.sanfoundry.com/probability-statistics-questions-answers-mcqs/',
+        nptel: 'https://nptel.ac.in/courses/111105090',
+        coursera: 'https://www.coursera.org/search?query=probability%20statistics',
+        edx: 'https://www.edx.org/search?q=probability+statistics',
+        reddit: 'https://www.reddit.com/search/?q=probability%20statistics',
+        stackoverflow: 'https://stackoverflow.com/search?q=probability+statistics'
     }
     // Add more subjects as needed
 };
@@ -112,11 +140,11 @@ export const GTU_PATTERNS = {
 };
 
 export const CRAWLER_CONFIG = {
-    maxRequestsPerCrawl: 100,
-    maxConcurrency: 5,
-    requestHandlerTimeoutSecs: 60,
-    navigationTimeoutSecs: 30,
+    maxRequestsPerCrawl: 500,
+    maxConcurrency: 10,
+    requestHandlerTimeoutSecs: 120,
+    navigationTimeoutSecs: 60,
     // Be polite - don't overload servers
-    minConcurrency: 1,
-    maxRequestRetries: 3
+    minConcurrency: 2,
+    maxRequestRetries: 5
 };
