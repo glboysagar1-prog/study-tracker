@@ -265,10 +265,6 @@ Generate all {count} cards now."""
         print(f"  🔮 Predicting semester paper for subject ID: {subject_id}...")
         
         try:
-            # Check if LLM is available
-            if not self.llm:
-                return {"error": "AI service not available. Please ensure BYTEZ_API_KEY is configured."}
-            
             # Get subject info
             if not self.supabase:
                 return {"error": "Database not available"}
@@ -276,6 +272,12 @@ Generate all {count} cards now."""
             subject_resp = self.supabase.table("subjects").select("*").eq("id", subject_id).execute()
             subject = subject_resp.data[0] if subject_resp.data else None
             subject_name = subject.get("subject_name", "Unknown") if subject else "Unknown"
+            subject_code = subject.get("subject_code", "") if subject else ""
+            
+            # Check if LLM is available
+            if not self.llm:
+                print("⚠️ AI service not available - using database fallback")
+                return self._generate_fallback_paper(subject_name, subject_code)
             
             # Get previous papers info
             papers_resp = self.supabase.table("previous_papers").select("*").eq("subject_id", subject_id).execute()
@@ -326,13 +328,93 @@ Generate 15-20 question parts covering all units. Mark 5-7 as "High" probability
             response = self.llm.run(messages)
             
             if response.error:
-                return {"error": str(response.error)}
+                print(f"AI Error: {response.error} - using fallback")
+                return self._generate_fallback_paper(subject_name, subject_code)
             
             return self._extract_json(response.output)
             
         except Exception as e:
             print(f"Error predicting paper: {e}")
-            return {"error": str(e)}
+            # Try fallback as last resort
+            try:
+                return self._generate_fallback_paper(subject_name, subject_code)
+            except:
+                return {"error": str(e)}
+
+    def _generate_fallback_paper(self, subject_name, subject_code):
+        """Generate a paper using important questions from database"""
+        print(f"  Generating fallback paper for {subject_name}")
+        
+        questions = []
+        
+        # Fetch important questions
+        try:
+            resp = self.supabase.table("important_questions").select("*").eq("subject_code", subject_code).execute()
+            db_questions = resp.data if resp.data else []
+        except:
+            db_questions = []
+            
+        # If no DB questions, use generic ones
+        if not db_questions:
+            return {
+                "subject_name": subject_name,
+                "questions": [
+                    {"q_number": "1(a)", "question": f"Explain the basic concepts of {subject_name}.", "marks": 3, "unit": "Unit 1", "probability": "High"},
+                    {"q_number": "1(b)", "question": "Discuss the importance of this subject in engineering.", "marks": 4, "unit": "Unit 1", "probability": "Medium"},
+                    {"q_number": "1(c)", "question": "Explain key terminology and definitions.", "marks": 7, "unit": "Unit 1", "probability": "High"},
+                    {"q_number": "2(a)", "question": "Compare and contrast different approaches.", "marks": 3, "unit": "Unit 2", "probability": "Medium"},
+                    {"q_number": "2(b)", "question": "Explain with a suitable diagram.", "marks": 4, "unit": "Unit 2", "probability": "High"},
+                    {"q_number": "2(c)", "question": "Solve the following problem (Example Problem).", "marks": 7, "unit": "Unit 2", "probability": "High"},
+                    {"q_number": "3(a)", "question": "Write short notes on advanced topics.", "marks": 3, "unit": "Unit 3", "probability": "Medium"},
+                    {"q_number": "3(b)", "question": "Explain the working principle.", "marks": 4, "unit": "Unit 3", "probability": "High"},
+                    {"q_number": "3(c)", "question": "Derive the equation/algorithm.", "marks": 7, "unit": "Unit 3", "probability": "High"},
+                    {"q_number": "4(a)", "question": "List advantages and disadvantages.", "marks": 3, "unit": "Unit 4", "probability": "Medium"},
+                    {"q_number": "4(b)", "question": "Explain the architecture/structure.", "marks": 4, "unit": "Unit 4", "probability": "High"},
+                    {"q_number": "4(c)", "question": "Explain with a real-world example.", "marks": 7, "unit": "Unit 4", "probability": "High"},
+                    {"q_number": "5(a)", "question": "Define the following terms.", "marks": 3, "unit": "Unit 5", "probability": "Medium"},
+                    {"q_number": "5(b)", "question": "Differentiate between X and Y.", "marks": 4, "unit": "Unit 5", "probability": "High"},
+                    {"q_number": "5(c)", "question": "Write a detailed note on recent trends.", "marks": 7, "unit": "Unit 5", "probability": "High"}
+                ],
+                "note": "⚠️ Generated in Offline Mode (AI Unavailable)"
+            }
+
+        # Map DB questions to paper structure
+        # We need roughly 15 questions. 
+        import random
+        selected = db_questions[:15] if len(db_questions) > 15 else db_questions
+        random.shuffle(selected)
+        
+        q_structure = ["1(a)", "1(b)", "1(c)", "2(a)", "2(b)", "2(c)", "3(a)", "3(b)", "3(c)", "4(a)", "4(b)", "4(c)", "5(a)", "5(b)", "5(c)"]
+        marks_map = {"(a)": 3, "(b)": 4, "(c)": 7}
+        
+        for i, q_num in enumerate(q_structure):
+            if i < len(selected):
+                q_data = selected[i]
+                questions.append({
+                    "q_number": q_num,
+                    "question": q_data.get("question_text", "Question text"),
+                    "marks": marks_map.get(q_num[-3:], 7),
+                    "unit": f"Unit {q_data.get('unit', 1)}",
+                    "chapter": "Important Topics",
+                    "probability": "High"
+                })
+            else:
+                # Fill remaining with generic if we run out of DB questions
+                suffix = q_num[-3:]
+                questions.append({
+                    "q_number": q_num,
+                    "question": f"Explain important concept from Unit {i//3 + 1}",
+                    "marks": marks_map.get(suffix, 7),
+                    "unit": f"Unit {i//3 + 1}",
+                    "chapter": "General",
+                    "probability": "Medium"
+                })
+                
+        return {
+            "subject_name": subject_name,
+            "questions": questions,
+            "note": "⚠️ Generated from Important Questions Database (AI Unavailable)"
+        }
     
     def generate_gtu_answer(self, question, subject_id=None):
         """Generate a perfect GTU-style answer for a question"""
