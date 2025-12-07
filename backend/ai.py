@@ -8,7 +8,17 @@ try:
     BYTEZ_AVAILABLE = True
 except ImportError:
     BYTEZ_AVAILABLE = False
-    logging.warning("Bytez library not available. Using basic AI features only.")
+    Bytez = None
+
+# Try to import Google Generative AI
+try:
+    import google.generativeai as genai
+    GOOGLE_AVAILABLE = True
+except ImportError:
+    GOOGLE_AVAILABLE = False
+    genai = None
+
+import logging
 
 logger = logging.getLogger(__name__)
 
@@ -18,80 +28,69 @@ load_dotenv()
 class AIProcessor:
     def __init__(self):
         self.bytez_client = None
+        self.gemini_model = None
         
         # Initialize Bytez client if API key is available
         bytez_api_key = os.environ.get('BYTEZ_API_KEY')
         if bytez_api_key and BYTEZ_AVAILABLE:
-            self.bytez_client = Bytez(bytez_api_key)
+            try:
+                self.bytez_client = Bytez(bytez_api_key)
+                logger.info("Bytez client initialized")
+            except Exception as e:
+                logger.warning(f"Failed to initialize Bytez: {e}")
+
+        # Initialize Google Gemini if Bytez failed or key not provided
+        google_api_key = os.environ.get('GOOGLE_API_KEY')
+        if not self.bytez_client and GOOGLE_AVAILABLE and google_api_key:
+            try:
+                genai.configure(api_key=google_api_key)
+                self.gemini_model = genai.GenerativeModel('gemini-pro')
+                logger.info("Google Gemini client initialized")
+            except Exception as e:
+                logger.warning(f"Failed to initialize Google Gemini: {e}")
     
     def generate_response(self, prompt, context=None):
         """
-        Generate AI response using GPT-4o via Bytez
+        Generate AI response using GPT-4o via Bytez or Gemini
         """
         try:
-            if not self.bytez_client:
-                logger.warning("Bytez client not initialized. Returning mock response.")
-                # Return a mock response when Bytez client is not available
-                return f"This is a simulated AI response to your question: '{prompt}'. In a production environment, this would be answered by GPT-4o via Bytez."
-            
-            # Choose gpt-4o model
-            logger.info(f"Generating response for prompt: {prompt[:50]}...")
-            model = self.bytez_client.model("openai/gpt-4o")
-            
-            # Prepare messages
-            messages = []
-            
-            # Add context if provided
-            if context:
-                messages.append({
-                    "role": "system",
-                    "content": context
-                })
-            
-            # Add user prompt
-            messages.append({
-                "role": "user",
-                "content": prompt
-            })
-            
-            # Generate response
-            logger.info("Calling Bytez API...")
-            result = model.run(messages)
-            logger.info(f"Bytez API returned result type: {type(result)}")
-            
-            # Bytez returns a Response object with .output and .error attributes
-            if hasattr(result, 'error') and result.error:
-                logger.error(f"Bytez API returned error: {result.error}")
-                raise Exception(f"Bytez GPT-4o error: {result.error}")
-            
-            if hasattr(result, 'output'):
-                output = result.output
+            # 1. Try Bytez
+            if self.bytez_client:
+                # Choose gpt-4o model
+                logger.info(f"Generating response for prompt: {prompt[:50]}...")
+                model = self.bytez_client.model("openai/gpt-4o")
+                
+                # Prepare messages
+                messages = []
+                if context:
+                    messages.append({"role": "system", "content": context})
+                messages.append({"role": "user", "content": prompt})
+                
+                # Generate response
+                logger.info("Calling Bytez API...")
+                result = model.run(messages)
+                
+                if hasattr(result, 'error') and result.error:
+                    raise Exception(f"Bytez GPT-4o error: {result.error}")
+                
+                if hasattr(result, 'output'):
+                    return result.output
+                return str(result)
+
+            # 2. Try Gemini
+            elif self.gemini_model:
+                logger.info(f"Generating response using Gemini for prompt: {prompt[:50]}...")
+                full_prompt = f"{context}\n\nUser: {prompt}" if context else prompt
+                response = self.gemini_model.generate_content(full_prompt)
+                return response.text
+
+            # 3. Mock Response
             else:
-                output = result
+                logger.warning("No AI client initialized. Returning mock response.")
+                return f"This is a simulated AI response to your question: '{prompt}'. Please configure BYETZ_API_KEY or GOOGLE_API_KEY."
             
-            # Extract response text from output
-            if isinstance(output, dict):
-                # Try various dict structures
-                if 'choices' in output and len(output['choices']) > 0:
-                    choice = output['choices'][0]
-                    if isinstance(choice, dict) and 'message' in choice:
-                        return choice['message'].get('content', str(output))
-                    return str(choice)
-                elif 'content' in output:
-                    return output['content']
-                elif 'text' in output:
-                    return output['text']
-                else:
-                    # Return the whole dict as string if we can't find content
-                    return str(output)
-            elif isinstance(output, str):
-                return output
-            else:
-                logger.warning(f"Unexpected output format: {output}")
-                return str(output)
         except Exception as e:
             logger.error(f"Error generating AI response: {str(e)}", exc_info=True)
-            # Return a mock response when there's an error
             return f"I encountered an error while processing your request: {str(e)}. Please try again later."
 
 # Global instance
