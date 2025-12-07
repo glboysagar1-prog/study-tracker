@@ -11,6 +11,14 @@ except ImportError:
     BYTEZ_AVAILABLE = False
     Bytez = None
 
+# Try to import Google Generative AI
+try:
+    import google.generativeai as genai
+    GOOGLE_AVAILABLE = True
+except ImportError:
+    GOOGLE_AVAILABLE = False
+    genai = None
+
 from fpdf import FPDF
 from supabase import create_client, Client
 from dotenv import load_dotenv
@@ -32,14 +40,29 @@ class EnhancedGTUAgent:
     Advanced AI Agent with video summarization, flashcards, voice, and more
     """
     
-    def __init__(self, bytez_key, supabase_url=None, supabase_key=None):
+    def __init__(self, bytez_key=None, google_key=None, supabase_url=None, supabase_key=None):
         # Initialize Bytez if available
         self.sdk = None
         self.llm = None
+        self.gemini_model = None
         
+        # 1. Try Bytez first
         if BYTEZ_AVAILABLE and Bytez and bytez_key:
-            self.sdk = Bytez(bytez_key)
-            self.llm = self.sdk.model("openai/gpt-4o")
+            try:
+                self.sdk = Bytez(bytez_key)
+                self.llm = self.sdk.model("openai/gpt-4o")
+                print("✓ Bytez AI initialized")
+            except Exception as e:
+                print(f"✗ Bytez initialization failed: {e}")
+        
+        # 2. Try Google Gemini if Bytez failed or key not provided
+        if not self.llm and GOOGLE_AVAILABLE and genai and google_key:
+            try:
+                genai.configure(api_key=google_key)
+                self.gemini_model = genai.GenerativeModel('gemini-pro')
+                print("✓ Google Gemini AI initialized")
+            except Exception as e:
+                print(f"✗ Google Gemini initialization failed: {e}")
         
         # Initialize Supabase
         if supabase_url and supabase_key:
@@ -258,6 +281,24 @@ Generate all {count} cards now."""
         
         return f"🗂️ Generated {len(flashcards)} flashcards for {topic}\n\n{flashcards_text}"
     
+    def _run_ai(self, prompt):
+        """Run AI query using available provider (Bytez or Gemini)"""
+        if self.llm:
+            messages = [{"role": "user", "content": prompt}]
+            response = self.llm.run(messages)
+            if response.error:
+                return {"error": str(response.error)}
+            return {"output": response.output}
+        
+        elif self.gemini_model:
+            try:
+                response = self.gemini_model.generate_content(prompt)
+                return {"output": response.text}
+            except Exception as e:
+                return {"error": str(e)}
+        
+        return {"error": "No AI service available"}
+
     # ==================== PREDICT SEMESTER PAPER ====================
     
     def predict_semester_paper(self, subject_id):
@@ -274,8 +315,8 @@ Generate all {count} cards now."""
             subject_name = subject.get("subject_name", "Unknown") if subject else "Unknown"
             subject_code = subject.get("subject_code", "") if subject else ""
             
-            # Check if LLM is available
-            if not self.llm:
+            # Check if AI is available
+            if not self.llm and not self.gemini_model:
                 print("⚠️ AI service not available - using database fallback")
                 return self._generate_fallback_paper(subject_name, subject_code)
             
@@ -324,14 +365,13 @@ JSON Structure:
 
 Generate 15-20 question parts covering all units. Mark 5-7 as "High" probability."""
 
-            messages = [{"role": "user", "content": prompt}]
-            response = self.llm.run(messages)
+            result = self._run_ai(prompt)
             
-            if response.error:
-                print(f"AI Error: {response.error} - using fallback")
+            if "error" in result:
+                print(f"AI Error: {result['error']} - using fallback")
                 return self._generate_fallback_paper(subject_name, subject_code)
             
-            return self._extract_json(response.output)
+            return self._extract_json(result["output"])
             
         except Exception as e:
             print(f"Error predicting paper: {e}")
@@ -421,8 +461,8 @@ Generate 15-20 question parts covering all units. Mark 5-7 as "High" probability
         print(f"  ✍️ Generating answer for: {question[:50]}...")
         
         try:
-            # Check if LLM is available
-            if not self.llm:
+            # Check if AI is available
+            if not self.llm and not self.gemini_model:
                 print("⚠️ AI service not available - using fallback answer")
                 return self._generate_fallback_answer(question)
             
@@ -443,14 +483,13 @@ Output as JSON:
   "diagram_suggestion": "Description of diagram to draw (or null if not needed)"
 }}"""
 
-            messages = [{"role": "user", "content": prompt}]
-            response = self.llm.run(messages)
+            result = self._run_ai(prompt)
             
-            if response.error:
-                print(f"AI Error: {response.error} - using fallback")
+            if "error" in result:
+                print(f"AI Error: {result['error']} - using fallback")
                 return self._generate_fallback_answer(question)
             
-            return self._extract_json(response.output)
+            return self._extract_json(result["output"])
             
         except Exception as e:
             print(f"Error generating answer: {e}")
@@ -747,6 +786,7 @@ app.add_middleware(
 # Initialize agent
 agent = EnhancedGTUAgent(
     bytez_key=os.getenv("BYTEZ_API_KEY"),
+    google_key=os.getenv("GOOGLE_API_KEY"),
     supabase_url=os.getenv("SUPABASE_URL"),
     supabase_key=os.getenv("SUPABASE_KEY")
 )
