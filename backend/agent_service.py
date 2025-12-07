@@ -795,8 +795,19 @@ agent = EnhancedGTUAgent(
 
 @app.get("/agent/health")
 async def health_check():
-    """Health check endpoint"""
-    return {"status": "healthy", "timestamp": datetime.now().isoformat()}
+    """Health check endpoint with AI status"""
+    return {
+        "status": "healthy",
+        "timestamp": datetime.now().isoformat(),
+        "ai_status": {
+            "bytez_initialized": bool(agent.llm),
+            "google_initialized": bool(agent.gemini_model),
+            "bytez_lib_available": BYTEZ_AVAILABLE,
+            "google_lib_available": GOOGLE_AVAILABLE,
+            "bytez_key_configured": bool(os.getenv("BYTEZ_API_KEY")),
+            "google_key_configured": bool(os.getenv("GOOGLE_API_KEY"))
+        }
+    }
 
 @app.post("/agent/chat")
 async def chat_with_agent(user_input: str):
