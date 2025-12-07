@@ -67,7 +67,6 @@ const Syllabus = () => {
           throw new Error(`Failed to fetch study materials: ${materialsResponse.status}`);
         }
         const materialsData = await materialsResponse.json();
-        const materialsData = await materialsResponse.json();
         // Filter out KhudkiBook materials client-side as a safety net
         const filteredMaterials = (materialsData.materials || []).filter(m => m.source_name !== 'KhudkiBook');
         setStudyMaterials(filteredMaterials);
