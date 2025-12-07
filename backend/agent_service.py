@@ -420,11 +420,13 @@ Generate 15-20 question parts covering all units. Mark 5-7 as "High" probability
         """Generate a perfect GTU-style answer for a question"""
         print(f"  ✍️ Generating answer for: {question[:50]}...")
         
-        # Check if LLM is available
-        if not self.llm:
-            return {"error": "AI service not available. Please ensure BYTEZ_API_KEY is configured."}
-        
-        prompt = f"""Generate a perfect GTU exam answer for this question:
+        try:
+            # Check if LLM is available
+            if not self.llm:
+                print("⚠️ AI service not available - using fallback answer")
+                return self._generate_fallback_answer(question)
+            
+            prompt = f"""Generate a perfect GTU exam answer for this question:
 "{question}"
 
 Requirements:
@@ -441,16 +443,40 @@ Output as JSON:
   "diagram_suggestion": "Description of diagram to draw (or null if not needed)"
 }}"""
 
-        try:
             messages = [{"role": "user", "content": prompt}]
             response = self.llm.run(messages)
             
             if response.error:
-                return {"error": str(response.error)}
+                print(f"AI Error: {response.error} - using fallback")
+                return self._generate_fallback_answer(question)
             
             return self._extract_json(response.output)
+            
         except Exception as e:
-            return {"error": str(e)}
+            print(f"Error generating answer: {e}")
+            return self._generate_fallback_answer(question)
+
+    def _generate_fallback_answer(self, question):
+        """Generate a generic fallback answer"""
+        return {
+            "answer": f"""**Answer for: {question}**
+
+*(Note: AI service is currently unavailable. Here is a general structure for answering this question)*
+
+1. **Introduction**: Start by defining the key terms in the question.
+2. **Main Concept**: Explain the core concept in 3-4 bullet points.
+   - Point 1: Key feature or characteristic
+   - Point 2: Working principle or mechanism
+   - Point 3: Important advantage or application
+3. **Diagram**: Always draw a neat, labeled diagram if applicable.
+4. **Example**: Provide a small example to illustrate the concept.
+5. **Conclusion**: Summarize the answer in one sentence.
+
+*To get the specific detailed answer, please ensure the AI service is configured.*""",
+            "unit": "General",
+            "chapter": "Important Topics",
+            "diagram_suggestion": "Draw a block diagram or flowchart representing the concept."
+        }
     
     def voice_interaction(self, audio_text):
         """Handle voice-transcribed queries"""
