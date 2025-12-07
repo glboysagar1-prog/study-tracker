@@ -33,7 +33,12 @@ const MaterialViewer = ({ subjectCode }) => {
 
             if (response.data.success) {
                 setSubject(response.data.subject);
-                setMaterials(response.data.materials);
+                // Filter out KhudkiBook materials client-side as a safety net
+                const filteredMaterials = {
+                    ...response.data.materials,
+                    notes: (response.data.materials.notes || []).filter(m => m.source_name !== 'KhudkiBook')
+                };
+                setMaterials(filteredMaterials);
             }
         } catch (err) {
             console.error('Failed to fetch materials:', err);
