@@ -1,70 +1,62 @@
+#!/usr/bin/env python3
 """
-Script to clear all notes from the database.
-This prepares the database for fresh AI-generated study notes.
+Clear all existing study notes from database using batch delete.
 """
+
 import os
 from dotenv import load_dotenv
 from supabase import create_client
 
 load_dotenv()
 
+supabase_url = os.getenv("SUPABASE_URL")
+supabase_key = os.getenv("SUPABASE_KEY")
+supabase = create_client(supabase_url, supabase_key)
+
 def clear_all_notes():
-    url = os.environ.get("SUPABASE_URL")
-    # Try service role key first for RLS bypass
-    key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY") or os.environ.get("SUPABASE_KEY")
+    """Remove ALL notes from the database"""
+    print("🗑️  Clearing ALL study notes from database...")
     
-    if not url or not key:
-        print("❌ Missing Supabase credentials")
-        return
-    
-    client = create_client(url, key)
+    # Get all note IDs first
+    try:
+        result = supabase.table("notes").select("id").execute()
+        note_ids = [row["id"] for row in result.data]
+        print(f"  Found {len(note_ids)} notes to delete")
+        
+        if note_ids:
+            # Delete in batches
+            batch_size = 50
+            total_deleted = 0
+            for i in range(0, len(note_ids), batch_size):
+                batch = note_ids[i:i+batch_size]
+                supabase.table("notes").delete().in_("id", batch).execute()
+                total_deleted += len(batch)
+                print(f"  Deleted batch {i//batch_size + 1} ({total_deleted}/{len(note_ids)})")
+            
+            print(f"  ✓ Cleared {total_deleted} notes")
+        else:
+            print("  ✓ No notes to delete")
+    except Exception as e:
+        print(f"  ✗ Error clearing notes: {e}")
+
+def verify_cleared():
+    """Verify tables are empty"""
+    print("\n📊 Verification:")
     
     try:
-        # First, count how many notes exist
-        count_res = client.table("notes").select("id", count="exact").execute()
-        total = count_res.count if hasattr(count_res, 'count') else len(count_res.data)
-        
-        print(f"📊 Found {total} notes in database")
-        
-        if total == 0:
-            print("✅ Database already clean")
-            return
-        
-        # Confirm deletion
-        print(f"⚠️  This will delete ALL {total} notes from the database.")
-        print("Press Enter to continue or Ctrl+C to cancel...")
-        input()
-        
-        # Delete all notes
-        print("🗑️  Deleting all notes...")
-        
-        # Delete in batches to avoid timeout
-        batch_size = 100
-        deleted = 0
-        
-        while True:
-            # Get a batch of IDs
-            batch_res = client.table("notes").select("id").limit(batch_size).execute()
-            
-            if not batch_res.data or len(batch_res.data) == 0:
-                break
-            
-            ids = [row['id'] for row in batch_res.data]
-            
-            # Delete this batch
-            for note_id in ids:
-                try:
-                    client.table("notes").delete().eq("id", note_id).execute()
-                    deleted += 1
-                    if deleted % 10 == 0:
-                        print(f"  Deleted {deleted}/{total}...")
-                except Exception as e:
-                    print(f"  Error deleting note {note_id}: {e}")
-        
-        print(f"✅ Deleted {deleted} notes successfully")
-        
-    except Exception as e:
-        print(f"❌ Error: {e}")
+        result = supabase.table("notes").select("id", count="exact").execute()
+        print(f"  - notes table: {len(result.data)} records")
+    except:
+        print("  - notes table: error")
 
 if __name__ == "__main__":
+    print("=" * 60)
+    print("🧹 Clearing All Study Notes")
+    print("=" * 60)
+    
     clear_all_notes()
+    verify_cleared()
+    
+    print("\n" + "=" * 60)
+    print("Ready for fresh Crawlee scraping!")
+    print("=" * 60)

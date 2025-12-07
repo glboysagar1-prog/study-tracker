@@ -6,6 +6,21 @@ export const GTU_WEBSITES = {
     // Add more GTU-related sites
 };
 
+// All 11 GTU Study Sites for comprehensive scraping
+export const GTU_STUDY_SITES = {
+    gtuOfficial: 'https://www.gtu.ac.in',
+    gtuStudyCom: 'https://gtustudy.com',
+    gtuStudyIn: 'https://gtustudy.in',
+    gtuRanker: 'https://gturanker.org',
+    gtuMaterial: 'https://gtumaterial.com',
+    gtuPaper: 'https://gtupaper.in',
+    gtuInfo: 'https://gtuinfo.in',
+    khudkiBook: 'https://khudkibook.web.app',
+    gtuStudyMates: 'https://ayanmemon296.github.io/GTU-Study-Mates',
+    gtuStudyMaterialBlog: 'https://gtustudymaterial.blogspot.com',
+    darshan: 'https://www.darshan.ac.in/gtu-study-material'
+};
+
 export const EDUCATIONAL_PLATFORMS = {
     geeksforgeeks: 'https://www.geeksforgeeks.org',
     tutorialspoint: 'https://www.tutorialspoint.com',
