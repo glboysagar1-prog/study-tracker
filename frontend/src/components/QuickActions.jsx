@@ -1,9 +1,6 @@
 import React, { useState } from 'react';
+import { API_BASE_URL } from '../config/api';
 
-/**
- * QuickActions Component
- * Reusable component for N8N-powered quick action buttons
- */
 const QuickActions = ({ subjectCode, subjectName, onActionComplete }) => {
     const [loading, setLoading] = useState(null);
     const [result, setResult] = useState(null);
@@ -13,32 +10,31 @@ const QuickActions = ({ subjectCode, subjectName, onActionComplete }) => {
         setResult(null);
 
         try {
-            const n8nModule = await import('../services/n8nService');
+            // Use local AI service directly
             let response;
-
+            
             switch (actionType) {
                 case 'notes':
-                    response = await n8nModule.generateNotes(subjectCode, null, subjectName);
+                    response = await generateNotes(subjectCode, null, subjectName);
                     break;
                 case 'quiz':
-                    response = await n8nModule.generateQuiz(subjectCode);
+                    response = await generateQuiz(subjectCode);
                     break;
                 case 'important':
-                    response = await n8nModule.getImportantQuestions(subjectCode, subjectName);
+                    response = await getImportantQuestions(subjectCode, subjectName);
                     break;
                 case 'papers':
-                    response = await n8nModule.getPreviousPapers(subjectCode, subjectName);
+                    response = await getPreviousPapers(subjectCode, subjectName);
                     break;
                 default:
                     throw new Error('Unknown action type');
             }
 
-            if (response.success && response.data) {
+            if (response.success) {
                 setResult({
                     type: 'success',
-                    message: response.data.answer_preview || response.data.final_answer || 'Action completed successfully!',
-                    pdfUrl: response.data.pdfUrl,
-                    suggestions: response.data.next_suggestions || []
+                    message: response.message || 'Action completed successfully!',
+                    suggestions: response.suggestions || []
                 });
 
                 if (onActionComplete) {
@@ -47,7 +43,7 @@ const QuickActions = ({ subjectCode, subjectName, onActionComplete }) => {
             } else {
                 setResult({
                     type: 'error',
-                    message: 'Failed to complete action. Please try again.'
+                    message: response.error || 'Failed to complete action. Please try again.'
                 });
             }
         } catch (error) {
@@ -58,6 +54,75 @@ const QuickActions = ({ subjectCode, subjectName, onActionComplete }) => {
             });
         } finally {
             setLoading(null);
+        }
+    };
+
+    // Local AI service functions
+    const generateNotes = async (subjectCode, unit, topic = null) => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/generate-notes`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    subject_code: subjectCode, 
+                    unit: unit, 
+                    topic: topic 
+                })
+            });
+            return await response.json();
+        } catch (error) {
+            return { success: false, error: error.message };
+        }
+    };
+
+    const generateQuiz = async (subjectCode, difficulty = 'medium', topics = []) => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/generate-quiz`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    subject_code: subjectCode, 
+                    difficulty: difficulty, 
+                    topics: topics 
+                })
+            });
+            return await response.json();
+        } catch (error) {
+            return { success: false, error: error.message };
+        }
+    };
+
+    const getImportantQuestions = async (subjectCode, subjectName, unit = null) => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/important-questions`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    subject_code: subjectCode, 
+                    subject_name: subjectName, 
+                    unit: unit 
+                })
+            });
+            return await response.json();
+        } catch (error) {
+            return { success: false, error: error.message };
+        }
+    };
+
+    const getPreviousPapers = async (subjectCode, subjectName, year = null) => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/previous-papers`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    subject_code: subjectCode, 
+                    subject_name: subjectName, 
+                    year: year 
+                })
+            });
+            return await response.json();
+        } catch (error) {
+            return { success: false, error: error.message };
         }
     };
 
@@ -119,16 +184,6 @@ const QuickActions = ({ subjectCode, subjectName, onActionComplete }) => {
                     <p className={`text-sm ${result.type === 'success' ? 'text-green-800' : 'text-red-800'}`}>
                         {result.message}
                     </p>
-                    {result.pdfUrl && (
-                        <a
-                            href={result.pdfUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-block mt-2 text-sm text-blue-600 hover:text-blue-800 font-medium"
-                        >
-                            📄 Download PDF
-                        </a>
-                    )}
                     {result.suggestions && result.suggestions.length > 0 && (
                         <div className="mt-3">
                             <p className="text-xs text-gray-600 mb-2">Next steps:</p>

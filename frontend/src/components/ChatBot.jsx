@@ -3,16 +3,12 @@ import React, { useState, useRef, useEffect } from 'react';
 const ChatBot = () => {
     const [isOpen, setIsOpen] = useState(false);
     const [messages, setMessages] = useState([
-        { text: "Hi! I'm your GTU AI Tutor. Ask me anything about your syllabus or exams!", sender: 'ai' }
+        { text: "Hello! I'm your GTU AI Tutor. How can I help you today?", sender: 'ai' }
     ]);
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
     const [suggestions, setSuggestions] = useState([]);
     const messagesEndRef = useRef(null);
-
-    const toggleChat = () => {
-        setIsOpen(!isOpen);
-    };
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -20,11 +16,16 @@ const ChatBot = () => {
 
     useEffect(() => {
         scrollToBottom();
-    }, [messages, isOpen]);
+    }, [messages]);
+
+    const toggleChat = () => {
+        setIsOpen(!isOpen);
+    };
 
     const handleSend = async () => {
-        if (!input.trim()) return;
+        if (!input.trim() || loading) return;
 
+        // Add user message
         const userMessage = { text: input, sender: 'user' };
         setMessages(prev => [...prev, userMessage]);
         setInput('');
@@ -32,40 +33,20 @@ const ChatBot = () => {
         setSuggestions([]); // Clear previous suggestions
 
         try {
-            // Try N8N webhook first
-            const n8nModule = await import('../services/n8nService');
-            const result = await n8nModule.sendChatMessage(input, messages);
-
-            if (result.success && result.data) {
-                const { answer_preview, final_answer, next_suggestions, pdfUrl } = result.data;
-
-                // Use final_answer if available, otherwise answer_preview
-                const responseText = final_answer || answer_preview || "I received your message but couldn't generate a response.";
-
-                let displayText = responseText;
-                if (pdfUrl) {
-                    displayText += `\n\n📄 [View PDF](${pdfUrl})`;
-                }
-
-                setMessages(prev => [...prev, { text: displayText, sender: 'ai' }]);
-
-                // Set quick reply suggestions if available
-                if (next_suggestions && Array.isArray(next_suggestions)) {
-                    setSuggestions(next_suggestions);
-                }
-            } else {
-                // Fallback to existing backend
-                await fallbackToBackend(input);
-            }
+            // Use local AI service directly (no fallback needed)
+            await sendToAI(input);
         } catch (error) {
-            console.error('N8N error, falling back to backend:', error);
-            await fallbackToBackend(input);
+            console.error('AI service error:', error);
+            setMessages(prev => [...prev, { 
+                text: "Sorry, I'm having trouble connecting right now. Please check your internet connection.", 
+                sender: 'ai' 
+            }]);
         } finally {
             setLoading(false);
         }
     };
 
-    const fallbackToBackend = async (prompt) => {
+    const sendToAI = async (prompt) => {
         try {
             const response = await fetch('/api/ai-assistant', {
                 method: 'POST',
@@ -79,13 +60,22 @@ const ChatBot = () => {
 
             if (data.success) {
                 setMessages(prev => [...prev, { text: data.response, sender: 'ai' }]);
+                // For now, we'll add some generic suggestions
+                setSuggestions([
+                    "Can you explain this in simpler terms?",
+                    "Give me an example",
+                    "What are the key points?"
+                ]);
             } else {
                 const errorMessage = data.error || "Sorry, I encountered an error. Please try again.";
                 setMessages(prev => [...prev, { text: errorMessage, sender: 'ai' }]);
             }
         } catch (error) {
             console.error('Error sending message:', error);
-            setMessages(prev => [...prev, { text: "Sorry, I'm having trouble connecting right now. Please check your internet connection.", sender: 'ai' }]);
+            setMessages(prev => [...prev, { 
+                text: "Sorry, I'm having trouble connecting right now. Please check your internet connection.", 
+                sender: 'ai' 
+            }]);
         }
     };
 

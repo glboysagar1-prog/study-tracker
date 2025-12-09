@@ -1412,3 +1412,149 @@ Make it comprehensive but easy to understand."""
     except Exception as e:
         logger.error(f"Explain topic error: {str(e)}", exc_info=True)
         return jsonify({'error': f'Failed to generate explanation: {str(e)}'}), 500
+
+@api_bp.route('/generate-notes', methods=['POST'])
+def generate_notes():
+    """
+    Generate study notes for a subject/unit using AI
+    """
+    try:
+        data = request.get_json()
+        subject_code = data.get('subject_code')
+        unit = data.get('unit')
+        topic = data.get('topic')
+        
+        if not subject_code:
+            return jsonify({'error': 'Subject code is required'}), 400
+            
+        # Generate notes using AI
+        prompt = f"Generate detailed study notes for GTU subject {subject_code}"
+        if unit:
+            prompt += f", Unit {unit}"
+        if topic:
+            prompt += f", Topic: {topic}"
+            
+        prompt += ". Provide clear, structured notes with key points, examples, and explanations."
+        
+        context = "You are an expert GTU tutor creating study notes for students."
+        notes = ai_processor.generate_response(prompt, context)
+        
+        return jsonify({
+            'success': True,
+            'message': notes,
+            'suggestions': [
+                "What are the key concepts I should focus on?",
+                "Can you provide examples for better understanding?",
+                "How can I apply this in practical scenarios?"
+            ]
+        }), 200
+    except Exception as e:
+        return jsonify({'success': False, 'error': f'Failed to generate notes: {str(e)}'}), 500
+
+@api_bp.route('/generate-quiz', methods=['POST'])
+def generate_quiz():
+    """
+    Generate a practice quiz for a subject using AI
+    """
+    try:
+        data = request.get_json()
+        subject_code = data.get('subject_code')
+        difficulty = data.get('difficulty', 'medium')
+        topics = data.get('topics', [])
+        
+        if not subject_code:
+            return jsonify({'error': 'Subject code is required'}), 400
+            
+        # Generate quiz using AI
+        prompt = f"Generate a practice quiz for GTU subject {subject_code} with {difficulty} difficulty level."
+        if topics:
+            prompt += f" Topics: {', '.join(topics)}"
+            
+        prompt += ". Create 5-10 multiple choice questions with 4 options each and indicate the correct answer."
+        
+        context = "You are an expert GTU exam creator designing practice quizzes for students."
+        quiz = ai_processor.generate_response(prompt, context)
+        
+        return jsonify({
+            'success': True,
+            'message': quiz,
+            'suggestions': [
+                "Can you explain the answers?",
+                "Generate another quiz with different topics",
+                "Focus on my weak areas"
+            ]
+        }), 200
+    except Exception as e:
+        return jsonify({'success': False, 'error': f'Failed to generate quiz: {str(e)}'}), 500
+
+@api_bp.route('/important-questions', methods=['POST'])
+def get_important_questions_ai():
+    """
+    Get important questions for a subject using AI
+    """
+    try:
+        data = request.get_json()
+        subject_code = data.get('subject_code')
+        subject_name = data.get('subject_name')
+        unit = data.get('unit')
+        
+        if not subject_code or not subject_name:
+            return jsonify({'error': 'Subject code and name are required'}), 400
+            
+        # Generate important questions using AI
+        prompt = f"List the most important questions for GTU subject {subject_name} ({subject_code})"
+        if unit:
+            prompt += f" Unit {unit}"
+            
+        prompt += ". Focus on frequently asked questions in GTU exams with high probability of appearing."
+        
+        context = "You are an experienced GTU examiner who knows which questions are most likely to appear in exams."
+        questions = ai_processor.generate_response(prompt, context)
+        
+        return jsonify({
+            'success': True,
+            'message': questions,
+            'suggestions': [
+                "Can you provide detailed answers?",
+                "Focus on numerical problems",
+                "Include diagram-based questions"
+            ]
+        }), 200
+    except Exception as e:
+        return jsonify({'success': False, 'error': f'Failed to generate questions: {str(e)}'}), 500
+
+@api_bp.route('/previous-papers', methods=['POST'])
+def get_previous_papers_ai():
+    """
+    Get previous year papers information using AI
+    """
+    try:
+        data = request.get_json()
+        subject_code = data.get('subject_code')
+        subject_name = data.get('subject_name')
+        year = data.get('year')
+        
+        if not subject_code or not subject_name:
+            return jsonify({'error': 'Subject code and name are required'}), 400
+            
+        # Generate previous papers information using AI
+        prompt = f"Provide information about previous year papers for GTU subject {subject_name} ({subject_code})"
+        if year:
+            prompt += f" from year {year}"
+            
+        prompt += ". Include exam patterns, important topics, and marking schemes."
+        
+        context = "You are a GTU exam expert who understands past exam patterns and trends."
+        papers_info = ai_processor.generate_response(prompt, context)
+        
+        return jsonify({
+            'success': True,
+            'message': papers_info,
+            'suggestions': [
+                "Show me the marking scheme",
+                "Focus on recent years",
+                "Include sample solutions"
+            ]
+        }), 200
+    except Exception as e:
+        return jsonify({'success': False, 'error': f'Failed to generate papers info: {str(e)}'}), 500

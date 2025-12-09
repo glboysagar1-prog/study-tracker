@@ -3,7 +3,7 @@ import { API_BASE_URL } from '../config/api';
 
 const SubjectChat = ({ subjectCode, subjectName, onClose }) => {
     const [messages, setMessages] = useState([
-        { text: `Hi! I'm your AI tutor for ${subjectName}. Ask me anything about the syllabus, concepts, or exam preparation!`, sender: 'ai' }
+        { text: `Hello! I'm your AI tutor for ${subjectName}. How can I help you with this subject?`, sender: 'ai' }
     ]);
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
@@ -18,73 +18,34 @@ const SubjectChat = ({ subjectCode, subjectName, onClose }) => {
     }, [messages]);
 
     const formatResponse = (text) => {
-        // Basic markdown-like formatting
-        let formatted = text;
-
-        // Bold: **text**
-        formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-
-        // Code blocks: ```code```
-        formatted = formatted.replace(/```(.*?)```/gs, '<pre class="bg-gray-100 p-2 rounded my-2 overflow-x-auto"><code>$1</code></pre>');
-
-        // Inline code: `code`
-        formatted = formatted.replace(/`([^`]+)`/g, '<code class="bg-gray-100 px-1 rounded">$1</code>');
-
-        // Bullet points
-        formatted = formatted.replace(/^- (.+)$/gm, '<li class="ml-4">$1</li>');
-        if (formatted.includes('<li')) {
-            formatted = formatted.replace(/(<li.*<\/li>)/s, '<ul class="list-disc my-2">$1</ul>');
-        }
-
-        // Line breaks
-        formatted = formatted.replace(/\n/g, '<br/>');
-
-        return formatted;
+        // Convert newlines to <br> tags and preserve formatting
+        return text.replace(/\n/g, '<br>');
     };
 
     const handleSend = async () => {
-        if (!input.trim()) return;
+        if (!input.trim() || loading) return;
 
-        const userMessage = { text: input, sender: 'user' };
-        setMessages(prev => [...prev, userMessage]);
         const currentInput = input;
+        const userMessage = { text: currentInput, sender: 'user' };
+        setMessages(prev => [...prev, userMessage]);
         setInput('');
         setLoading(true);
 
         try {
-            // Try N8N webhook first
-            const n8nModule = await import('../services/n8nService');
-            const result = await n8nModule.sendSubjectChat(
-                subjectCode,
-                subjectName,
-                currentInput,
-                messages
-            );
-
-            if (result.success && result.data) {
-                const { answer_preview, final_answer, pdfUrl } = result.data;
-
-                const responseText = final_answer || answer_preview || "I received your question but couldn't generate a response.";
-
-                let displayText = responseText;
-                if (pdfUrl) {
-                    displayText += `\n\n📄 [View Generated PDF](${pdfUrl})`;
-                }
-
-                setMessages(prev => [...prev, { text: displayText, sender: 'ai' }]);
-            } else {
-                // Fallback to existing backend
-                await fallbackToBackend(currentInput);
-            }
+            // Use local AI service directly
+            await sendToAI(currentInput);
         } catch (error) {
-            console.error('N8N error, falling back to backend:', error);
-            await fallbackToBackend(currentInput);
+            console.error('AI service error:', error);
+            setMessages(prev => [...prev, {
+                text: "Sorry, I'm having trouble connecting right now. Please ensure the backend is running.",
+                sender: 'ai'
+            }]);
         } finally {
             setLoading(false);
         }
     };
 
-    const fallbackToBackend = async (question) => {
+    const sendToAI = async (question) => {
         try {
             const response = await fetch(`${API_BASE_URL}/ai-chat/subject`, {
                 method: 'POST',
@@ -102,6 +63,15 @@ const SubjectChat = ({ subjectCode, subjectName, onClose }) => {
 
             if (data.success && data.response) {
                 setMessages(prev => [...prev, { text: data.response, sender: 'ai' }]);
+
+                // Add some generic suggestions
+                const suggestions = [
+                    "Can you explain that with an example?",
+                    "What are the key points I should remember?",
+                    "How does this relate to other topics?"
+                ];
+                // We'll just log these for now, as we don't have a UI for them in this component
+                console.log("Suggestions:", suggestions);
             } else {
                 setMessages(prev => [...prev, {
                     text: "Sorry, I encountered an error. Please try again.",

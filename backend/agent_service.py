@@ -884,6 +884,7 @@ app.add_middleware(
 agent = EnhancedGTUAgent(
     bytez_key=os.getenv("BYTEZ_API_KEY"),
     google_key=os.getenv("GOOGLE_API_KEY"),
+    lightning_key=os.getenv("LIGHTNING_API_KEY"),
     supabase_url=os.getenv("SUPABASE_URL"),
     supabase_key=os.getenv("SUPABASE_KEY")
 )
@@ -897,10 +898,12 @@ async def health_check():
         "status": "healthy",
         "timestamp": datetime.now().isoformat(),
         "ai_status": {
+            "lightning_initialized": bool(agent.lightning_client),
             "bytez_initialized": bool(agent.llm),
             "google_initialized": bool(agent.gemini_model),
             "bytez_lib_available": BYTEZ_AVAILABLE,
             "google_lib_available": GOOGLE_AVAILABLE,
+            "lightning_key_configured": bool(os.getenv("LIGHTNING_API_KEY")),
             "bytez_key_configured": bool(os.getenv("BYTEZ_API_KEY")),
             "google_key_configured": bool(os.getenv("GOOGLE_API_KEY"))
         }
