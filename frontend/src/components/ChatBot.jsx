@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import ReactMarkdown from 'react-markdown';
 
 const ChatBot = () => {
     const [isOpen, setIsOpen] = useState(false);
@@ -37,9 +38,9 @@ const ChatBot = () => {
             await sendToAI(input);
         } catch (error) {
             console.error('AI service error:', error);
-            setMessages(prev => [...prev, { 
-                text: "Sorry, I'm having trouble connecting right now. Please check your internet connection.", 
-                sender: 'ai' 
+            setMessages(prev => [...prev, {
+                text: "Sorry, I'm having trouble connecting right now. Please check your internet connection.",
+                sender: 'ai'
             }]);
         } finally {
             setLoading(false);
@@ -72,9 +73,9 @@ const ChatBot = () => {
             }
         } catch (error) {
             console.error('Error sending message:', error);
-            setMessages(prev => [...prev, { 
-                text: "Sorry, I'm having trouble connecting right now. Please check your internet connection.", 
-                sender: 'ai' 
+            setMessages(prev => [...prev, {
+                text: "Sorry, I'm having trouble connecting right now. Please check your internet connection.",
+                sender: 'ai'
             }]);
         }
     };
@@ -132,7 +133,26 @@ const ChatBot = () => {
                                         : 'bg-white text-gray-800 border border-gray-200 rounded-bl-none shadow-sm'
                                         }`}
                                 >
-                                    {msg.text}
+                                    {/* Safe rendering with markdown support */}
+                                    {typeof msg.text === 'string' ? (
+                                        <ReactMarkdown
+                                            components={{
+                                                p: ({ node, ...props }) => <p className="mb-2 last:mb-0" {...props} />,
+                                                ul: ({ node, ...props }) => <ul className="list-disc pl-4 mb-2" {...props} />,
+                                                ol: ({ node, ...props }) => <ol className="list-decimal pl-4 mb-2" {...props} />,
+                                                li: ({ node, ...props }) => <li className="mb-1" {...props} />,
+                                                code: ({ node, inline, ...props }) => (
+                                                    inline
+                                                        ? <code className="bg-gray-100 px-1 rounded" {...props} />
+                                                        : <code className="block bg-gray-100 p-2 rounded mb-2 overflow-x-auto" {...props} />
+                                                )
+                                            }}
+                                        >
+                                            {msg.text}
+                                        </ReactMarkdown>
+                                    ) : (
+                                        <span>{JSON.stringify(msg.text)}</span>
+                                    )}
                                 </div>
                             </div>
                         ))}
