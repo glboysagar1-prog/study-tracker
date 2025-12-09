@@ -65,17 +65,25 @@ class AIProcessor:
                     full_prompt = f"{context}\n\nQuestion: {prompt}" if context else prompt
                     response = self.bytez_client.model("openai/gpt-4o").run(full_prompt)
                     
-                    # Debug: Log raw response
-                    logger.info(f"Bytez raw response type: {type(response)}")
-                    logger.info(f"Bytez raw response content: {response}")
+                    # Debug: Log raw response using print for visibility
+                    print(f"DEBUG: Bytez raw response type: {type(response)}", flush=True)
+                    print(f"DEBUG: Bytez raw response content: {response}", flush=True)
+                    print(f"DEBUG: Bytez raw response dir: {dir(response)}", flush=True)
                     
+                    final_response = ""
                     # Handle Bytez response structure
                     if hasattr(response, 'output'):
-                        return response.output
+                        final_response = response.output
                     elif isinstance(response, str):
-                        return response
+                        final_response = response
                     else:
-                        return str(response)
+                        final_response = str(response)
+                    
+                    if not final_response:
+                        print("DEBUG: Final response text is empty!", flush=True)
+                        return "Error: The AI operation completed but returned no text. This might be a model availability issue."
+                        
+                    return final_response
                         
                 except Exception as e:
                     logger.error(f"Bytez generation failed: {e}")
