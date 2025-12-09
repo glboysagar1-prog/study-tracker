@@ -2,15 +2,21 @@ import os
 import logging
 from dotenv import load_dotenv
 
-# Try to import bytez, but make it optional
+# Try to import bytez (robust import)
 try:
     from bytez import Bytez
     BYTEZ_AVAILABLE = True
-    logging.info("✓ Bytez library imported successfully")
-except ImportError as e:
-    BYTEZ_AVAILABLE = False
-    Bytez = None
-    logging.error(f"✗ Bytez import failed: {e}")
+    logging.info("✓ Bytez imported from root")
+except ImportError:
+    try:
+        # Fallback for some versions/structures
+        from bytez.main import Bytez
+        BYTEZ_AVAILABLE = True
+        logging.info("✓ Bytez imported from bytez.main")
+    except ImportError as e:
+        BYTEZ_AVAILABLE = False
+        Bytez = None
+        logging.error(f"✗ Bytez import failed: {e}")
 
 # Mock OpenAI for Lightning AI if needed
 try:
