@@ -39,9 +39,9 @@ class AIProcessor:
             except Exception as e:
                 logger.warning(f"Failed to initialize Bytez: {e}")
 
-        # Initialize Google Gemini if Bytez failed or key not provided
+        # Initialize Google Gemini (Always try to initialize as fallback)
         google_api_key = os.environ.get('GOOGLE_API_KEY')
-        if not self.bytez_client and GOOGLE_AVAILABLE and google_api_key:
+        if GOOGLE_AVAILABLE and google_api_key:
             try:
                 genai.configure(api_key=google_api_key)
                 self.gemini_model = genai.GenerativeModel('gemini-flash-latest')
@@ -56,33 +56,40 @@ class AIProcessor:
         try:
             # 1. Try Bytez
             if self.bytez_client:
-                # Choose gpt-4o model
-                logger.info(f"Generating response for prompt: {prompt[:50]}...")
-                model = self.bytez_client.model("openai/gpt-4o")
-                
-                # Prepare messages
-                messages = []
-                if context:
-                    messages.append({"role": "system", "content": context})
-                messages.append({"role": "user", "content": prompt})
-                
-                # Generate response
-                logger.info("Calling Bytez API...")
-                result = model.run(messages)
-                
-                if hasattr(result, 'error') and result.error:
-                    raise Exception(f"Bytez GPT-4o error: {result.error}")
-                
-                if hasattr(result, 'output'):
-                    return result.output
-                return str(result)
+                try:
+                    # Choose gpt-4o model
+                    logger.info(f"Generating response for prompt: {prompt[:50]}...")
+                    model = self.bytez_client.model("openai/gpt-4o")
+                    
+                    # Prepare messages
+                    messages = []
+                    if context:
+                        messages.append({"role": "system", "content": context})
+                    messages.append({"role": "user", "content": prompt})
+                    
+                    # Generate response
+                    logger.info("Calling Bytez API...")
+                    result = model.run(messages)
+                    
+                    if hasattr(result, 'error') and result.error:
+                        raise Exception(f"Bytez GPT-4o error: {result.error}")
+                    
+                    if hasattr(result, 'output'):
+                        return result.output
+                    return str(result)
+                except Exception as e:
+                    logger.warning(f"Bytez generation failed: {e}. Falling back to Gemini.")
 
-            # 2. Try Gemini
-            elif self.gemini_model:
-                logger.info(f"Generating response using Gemini for prompt: {prompt[:50]}...")
-                full_prompt = f"{context}\n\nUser: {prompt}" if context else prompt
-                response = self.gemini_model.generate_content(full_prompt)
-                return response.text
+            # 2. Try Gemini (Fallback or Primary if Bytez unavailable)
+            if self.gemini_model:
+                try:
+                    logger.info(f"Generating response using Gemini for prompt: {prompt[:50]}...")
+                    full_prompt = f"{context}\n\nUser: {prompt}" if context else prompt
+                    response = self.gemini_model.generate_content(full_prompt)
+                    return response.text
+                except Exception as e:
+                     logger.error(f"Gemini generation failed: {e}")
+                     raise e
 
             # 3. Mock Response
             else:

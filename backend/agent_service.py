@@ -55,8 +55,8 @@ class EnhancedGTUAgent:
             except Exception as e:
                 print(f"✗ Bytez initialization failed: {e}")
         
-        # 2. Try Google Gemini if Bytez failed or key not provided
-        if not self.llm and GOOGLE_AVAILABLE and genai and google_key:
+        # 2. Try Google Gemini (Always try to initialize as fallback)
+        if GOOGLE_AVAILABLE and genai and google_key:
             try:
                 genai.configure(api_key=google_key)
                 self.gemini_model = genai.GenerativeModel('gemini-flash-latest')
@@ -137,7 +137,7 @@ Respond with ONLY valid JSON:
 }}"""
 
         messages = [{"role": "user", "content": prompt}]
-        response = self.llm.run(messages)
+        response = self._run_messages(messages)
         
         if response.error:
             print(f"❌ Error: {response.error}")
@@ -210,7 +210,7 @@ Provide:
 Keep it concise (200-300 words)."""
 
             messages = [{"role": "user", "content": prompt}]
-            response = self.llm.run(messages)
+            response = self._run_messages(messages)
             
             if response.error:
                 return f"Error summarizing: {response.error}"
@@ -254,7 +254,7 @@ Requirements:
 Generate all {count} cards now."""
 
         messages = [{"role": "user", "content": prompt}]
-        response = self.llm.run(messages)
+        response = self._run_messages(messages)
         
         if response.error:
             return f"Error: {response.error}"
@@ -281,23 +281,47 @@ Generate all {count} cards now."""
         
         return f"🗂️ Generated {len(flashcards)} flashcards for {topic}\n\n{flashcards_text}"
     
+    def _run_messages(self, messages):
+        """Run with fallback: Bytez -> Gemini"""
+        # 1. Try Bytez
+        if self.llm:
+            try:
+                response = self.llm.run(messages)
+                if not response.error:
+                    return response
+                print(f"⚠️ Bytez error: {response.error}")
+            except Exception as e:
+                print(f"⚠️ Bytez exception: {e}")
+
+        # 2. Fallback to Gemini
+        if self.gemini_model:
+            try:
+                # Gemini simplified: last message as prompt
+                last_msg = messages[-1]['content']
+                resp = self.gemini_model.generate_content(last_msg)
+                
+                # Mock response object to match Bytez interface
+                class MockResponse:
+                    def __init__(self, text): self.output = text; self.error = None
+                return MockResponse(resp.text)
+                
+            except Exception as e:
+                class ErrorResponse:
+                    def __init__(self, err): self.error = str(err); self.output = None
+                return ErrorResponse(e)
+
+        class NoAIResponse:
+            def __init__(self): self.error = "No AI service available"; self.output = None
+        return NoAIResponse()
+
     def _run_ai(self, prompt):
         """Run AI query using available provider (Bytez or Gemini)"""
-        if self.llm:
-            messages = [{"role": "user", "content": prompt}]
-            response = self.llm.run(messages)
-            if response.error:
-                return {"error": str(response.error)}
-            return {"output": response.output}
+        messages = [{"role": "user", "content": prompt}]
+        response = self._run_messages(messages)
         
-        elif self.gemini_model:
-            try:
-                response = self.gemini_model.generate_content(prompt)
-                return {"output": response.text}
-            except Exception as e:
-                return {"error": str(e)}
-        
-        return {"error": "No AI service available"}
+        if response.error:
+             return {"error": str(response.error)}
+        return {"output": response.output}
 
     # ==================== PREDICT SEMESTER PAPER ====================
     
@@ -528,7 +552,7 @@ Provide a clear, spoken-style answer that's easy to understand when read aloud.
 Keep it concise (2-3 sentences) and natural."""
 
         messages = [{"role": "user", "content": prompt}]
-        response = self.llm.run(messages)
+        response = self._run_messages(messages)
         
         if response.error:
             return "Sorry, I couldn't process that."
@@ -698,7 +722,7 @@ Improvement areas:
             # Use AI to answer
             try:
                 messages = [{"role": "user", "content": f"Answer this GTU exam question concisely: {question}"}]
-                response = self.llm.run(messages)
+                response = self._run_messages(messages)
                 if not response.error:
                     return response.output
             except:
