@@ -10,13 +10,9 @@ except ImportError:
     BYTEZ_AVAILABLE = False
     Bytez = None
 
-# Try to import Google Generative AI
-try:
-    import google.generativeai as genai
-    GOOGLE_AVAILABLE = True
-except ImportError:
-    GOOGLE_AVAILABLE = False
-    genai = None
+# Google Gemini removed as per user request
+GOOGLE_AVAILABLE = False
+genai = None
 
 import logging
 
@@ -39,15 +35,10 @@ class AIProcessor:
             except Exception as e:
                 logger.warning(f"Failed to initialize Bytez: {e}")
 
-        # Initialize Google Gemini (Always try to initialize as fallback)
-        google_api_key = os.environ.get('GOOGLE_API_KEY')
-        if GOOGLE_AVAILABLE and google_api_key:
-            try:
-                genai.configure(api_key=google_api_key)
-                self.gemini_model = genai.GenerativeModel('gemini-flash-latest')
-                logger.info("Google Gemini client initialized")
-            except Exception as e:
-                logger.warning(f"Failed to initialize Google Gemini: {e}")
+                logger.warning(f"Failed to initialize Bytez: {e}")
+        
+        # Google Gemini Disabled
+        self.gemini_model = None
     
     def generate_response(self, prompt, context=None):
         """
@@ -82,16 +73,9 @@ class AIProcessor:
                     logger.warning(f"Bytez generation failed: {e}")
                     raise e # Re-raise to show the actual Bytez error
 
-            # 2. Try Gemini (Only if Bytez is not initialized)
+            # 2. Gemini Disabled
             if self.gemini_model:
-                try:
-                    logger.info(f"Generating response using Gemini for prompt: {prompt[:50]}...")
-                    full_prompt = f"{context}\n\nUser: {prompt}" if context else prompt
-                    response = self.gemini_model.generate_content(full_prompt)
-                    return response.text
-                except Exception as e:
-                     logger.error(f"Gemini generation failed: {e}")
-                     raise e
+                pass
 
             # 3. Mock Response
             else:

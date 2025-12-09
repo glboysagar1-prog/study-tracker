@@ -11,13 +11,9 @@ except ImportError:
     BYTEZ_AVAILABLE = False
     Bytez = None
 
-# Try to import Google Generative AI
-try:
-    import google.generativeai as genai
-    GOOGLE_AVAILABLE = True
-except ImportError:
-    GOOGLE_AVAILABLE = False
-    genai = None
+# Google Gemini removed as per user request
+GOOGLE_AVAILABLE = False
+genai = None
 
 from fpdf import FPDF
 from supabase import create_client, Client
@@ -55,14 +51,16 @@ class EnhancedGTUAgent:
             except Exception as e:
                 print(f"✗ Bytez initialization failed: {e}")
         
-        # 2. Try Google Gemini (Always try to initialize as fallback)
-        if GOOGLE_AVAILABLE and genai and google_key:
+        if BYTEZ_AVAILABLE and Bytez and bytez_key:
             try:
-                genai.configure(api_key=google_key)
-                self.gemini_model = genai.GenerativeModel('gemini-flash-latest')
-                print("✓ Google Gemini AI initialized")
+                self.sdk = Bytez(bytez_key)
+                self.llm = self.sdk.model("openai/gpt-4o")
+                print("✓ Bytez AI initialized")
             except Exception as e:
-                print(f"✗ Google Gemini initialization failed: {e}")
+                print(f"✗ Bytez initialization failed: {e}")
+                
+        # Google Gemini disabled
+        self.gemini_model = None
         
         # Initialize Supabase
         if supabase_url and supabase_key:
@@ -303,25 +301,14 @@ Generate all {count} cards now."""
                     def __init__(self, err): self.error = f"Bytez Error: {str(err)}"; self.output = None
                 return ErrorResponse(e)
 
-        # 2. Fallback to Gemini ONLY if Bytez is NOT configured (self.llm is None)
+        # 2. Gemini Disabled
         if self.gemini_model:
-            try:
-                # Gemini simplified: last message as prompt
-                last_msg = messages[-1]['content']
-                resp = self.gemini_model.generate_content(last_msg)
-                
-                # Mock response object to match Bytez interface
-                class MockResponse:
-                    def __init__(self, text): self.output = text; self.error = None
-                return MockResponse(resp.text)
-                
-            except Exception as e:
-                class ErrorResponse:
-                    def __init__(self, err): self.error = str(err); self.output = None
-                return ErrorResponse(e)
+            pass
 
         class NoAIResponse:
-            def __init__(self): self.error = "No AI service available"; self.output = None
+            def __init__(self): 
+                self.error = "AI Service Error: Bytez is not configured or failed. Please check BYTEZ_API_KEY in your environment variables."
+                self.output = None
         return NoAIResponse()
 
     def _run_ai(self, prompt):
