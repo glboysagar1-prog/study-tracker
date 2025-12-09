@@ -24,6 +24,10 @@ logger = logging.getLogger(__name__)
 # Load environment variables
 load_dotenv()
 
+print("AI Processor initialization...")
+print(f"BYTEZ_API_KEY configured: {bool(os.getenv('BYTEZ_API_KEY'))}")
+print(f"BYTEZ_LIB_AVAILABLE: {BYTEZ_AVAILABLE}")
+
 class AIProcessor:
     def __init__(self):
         self.bytez_client = None
@@ -31,15 +35,16 @@ class AIProcessor:
         
         # Initialize Bytez client if API key is available
         bytez_api_key = os.environ.get('BYTEZ_API_KEY')
+        print(f"Initializing AI Processor with BYTEZ_API_KEY: {bool(bytez_api_key)}")
         if bytez_api_key and BYTEZ_AVAILABLE:
             try:
                 self.bytez_client = Bytez(bytez_api_key)
                 logger.info("Bytez client initialized")
+                print("Bytez client initialized successfully")
             except Exception as e:
                 logger.warning(f"Failed to initialize Bytez: {e}")
+                print(f"Failed to initialize Bytez: {e}")
 
-                logger.warning(f"Failed to initialize Bytez: {e}")
-        
         # Google Gemini Disabled
         self.gemini_model = None
     
@@ -91,3 +96,4 @@ class AIProcessor:
 
 # Global instance
 ai_processor = AIProcessor()
+print("AI Processor initialized successfully")
