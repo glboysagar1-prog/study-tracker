@@ -65,6 +65,10 @@ class AIProcessor:
                     full_prompt = f"{context}\n\nQuestion: {prompt}" if context else prompt
                     response = self.bytez_client.model("openai/gpt-4o").run(full_prompt)
                     
+                    # Debug: Log raw response
+                    logger.info(f"Bytez raw response type: {type(response)}")
+                    logger.info(f"Bytez raw response content: {response}")
+                    
                     # Handle Bytez response structure
                     if hasattr(response, 'output'):
                         return response.output
