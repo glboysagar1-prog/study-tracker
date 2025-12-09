@@ -354,6 +354,30 @@ Generate all {count} cards now."""
                 print("⚠️ AI service not available - using database fallback")
                 return self._generate_fallback_paper(subject_name, subject_code)
             
+            # --- CACHE CHECK (NEW) ---
+            try:
+                # Check for existing predicted paper in study_materials
+                cache_resp = self.supabase.table("study_materials") \
+                    .select("*") \
+                    .eq("subject_id", subject_id) \
+                    .eq("material_type", "predicted_paper") \
+                    .limit(1) \
+                    .execute()
+                
+                if cache_resp.data:
+                    print("  ✓ Found cached predicted paper")
+                    cached_paper = cache_resp.data[0]
+                    # Parse the JSON content
+                    import json
+                    try:
+                        paper_data = json.loads(cached_paper['content'])
+                        return paper_data
+                    except json.JSONDecodeError:
+                        print("  ⚠️ Cached paper has invalid JSON content, regenerating...")
+            except Exception as e:
+                print(f"  ⚠️ Cache check failed: {e}")
+            # -------------------------
+
             # Get previous papers info
             papers_resp = self.supabase.table("previous_papers").select("*").eq("subject_id", subject_id).execute()
             papers = papers_resp.data or []
@@ -405,7 +429,24 @@ Generate 15-20 question parts covering all units. Mark 5-7 as "High" probability
                 print(f"AI Error: {result['error']} - using fallback")
                 return self._generate_fallback_paper(subject_name, subject_code)
             
-            return self._extract_json(result["output"])
+            paper_json = self._extract_json(result["output"])
+            
+            # --- CACHE SAVE (NEW) ---
+            try:
+                # Store the generated paper in study_materials
+                self.supabase.table("study_materials").insert({
+                    "subject_id": subject_id,
+                    "title": f"Predicted GTU Paper 2025 - {subject_name}",
+                    "content": json.dumps(paper_json), # Store as string
+                    "material_type": "predicted_paper",
+                    "created_at": datetime.now().isoformat()
+                }).execute()
+                print("  ✓ Saved predicted paper to cache (study_materials)")
+            except Exception as e:
+                 print(f"  ⚠️ Failed to save to cache: {e}")
+            # ------------------------
+            
+            return paper_json
             
         except Exception as e:
             print(f"Error predicting paper: {e}")
