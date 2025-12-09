@@ -164,7 +164,7 @@ const SyllabusViewer = ({ subjectCode }) => {
                                                 <span className="mt-1.5 w-1.5 h-1.5 bg-blue-400 rounded-full flex-shrink-0"></span>
                                                 <span>
                                                     <span className="font-medium">{topic.topic}</span>
-                                                    {topic.content && <span className="text-gray-500 text-sm block mt-1">{topic.content}</span>}
+                                                    {/* Content hidden as per user request to reduce clutter */}
                                                 </span>
                                             </li>
                                         ))}
