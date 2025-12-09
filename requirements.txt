@@ -9,7 +9,7 @@ bcrypt==4.1.2
 Flask-JWT-Extended==4.5.3
 fastapi==0.109.0
 uvicorn==0.27.0
-bytez==0.1.0
+bytez>=2.0.4
 fpdf==1.7.2
 apscheduler==3.10.4
 youtube-transcript-api==0.6.2
