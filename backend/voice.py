@@ -5,22 +5,15 @@ Using Bytez SDK for Whisper and TTS with audio format conversion
 import os
 import tempfile
 import subprocess
-
-# Try to import Bytez, but make it optional
-try:
-    from bytez import Bytez
-    BYTEZ_AVAILABLE = True
-except ImportError:
-    BYTEZ_AVAILABLE = False
-    Bytez = None
+from bytez import Bytez
 
 class VoiceProcessor:
     def __init__(self):
         self.client = None
         
-        # Initialize Bytez client if API key is available and library is loaded
+        # Initialize Bytez client if API key is available
         bytez_api_key = os.environ.get('BYTEZ_API_KEY')
-        if bytez_api_key and BYTEZ_AVAILABLE and Bytez:
+        if bytez_api_key:
             self.client = Bytez(bytez_api_key)
     
     def transcribe_audio(self, audio_file_path, language="en"):
