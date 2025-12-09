@@ -2,13 +2,6 @@ import os
 import logging
 from dotenv import load_dotenv
 
-# Try to import bytez with verbose debugging
-try:
-    import bytez
-    try:
-        from bytez import Bytez
-        BYTEZ_AVAILABLE = True
-        logging.info(f"✓ Bytez library imported successfully. Version: {getattr(bytez, '__version__', 'unknown')}")
 # Try to import bytez, but make it optional
 try:
     from bytez import Bytez
@@ -16,9 +9,8 @@ try:
 except ImportError:
     BYTEZ_AVAILABLE = False
     Bytez = None
-    # Switched to info to avoid startling user
-    # logging.info("Bytez library not found (optional)")
 
+# Mock OpenAI for Lightning AI if needed
 try:
     from openai import OpenAI
     OPENAI_AVAILABLE = True
@@ -30,8 +22,6 @@ except ImportError:
 GOOGLE_AVAILABLE = False
 genai = None
 
-import logging
-
 logger = logging.getLogger(__name__)
 
 # Load environment variables
@@ -41,22 +31,10 @@ class AIProcessor:
     def __init__(self):
         self.bytez_client = None
         self.gemini_model = None
-        self.lightning_client = None
         
-        # 0. Initialize Lightning AI (Primary)
-        lightning_key = os.environ.get('LIGHTNING_API_KEY')
-        if lightning_key and OPENAI_AVAILABLE:
-            try:
-                self.lightning_client = OpenAI(
-                    api_key=lightning_key,
-                    base_url="https://lightning.ai/api/v1"
-                )
-                logger.info("Lightning AI initialized in AIProcessor")
-            except Exception as e:
-                logger.warning(f"Failed to initialize Lightning AI: {e}")
-
-        # 1. Initialize Bytez client (Secondary)
+        # Initialize Bytez client if API key is available
         bytez_api_key = os.environ.get('BYTEZ_API_KEY')
+        
         if bytez_api_key and BYTEZ_AVAILABLE:
             try:
                 self.bytez_client = Bytez(bytez_api_key)
@@ -67,67 +45,36 @@ class AIProcessor:
         # Google Gemini Disabled
         self.gemini_model = None
     
-    def generate_response(self, prompt, context=None):
+    def generate_response(self, prompt, context="", model_type="gemini", image_parts=None):
         """
-        Generate AI response using Lightning AI or Bytez
+        Generate a response using the available AI model.
+        Prioritizes Bytez, falls back to mock response if configured.
         """
         try:
-            # 0. Try Lightning AI
-            if self.lightning_client:
-                try:
-                    logger.info(f"Using Lightning AI for prompt: {prompt[:50]}...")
-                    messages = []
-                    if context:
-                        messages.append({"role": "system", "content": context})
-                    messages.append({"role": "user", "content": prompt})
-                    
-                    response = self.lightning_client.chat.completions.create(
-                        model="gpt-4o",
-                        messages=messages
-                    )
-                    content = response.choices[0].message.content
-                    return content
-                except Exception as e:
-                    logger.warning(f"Lightning AI generation failed: {e}")
-                    if "402" in str(e) or "insufficient_balance" in str(e):
-                        return f"Lightning AI Error: Insufficient Credits. Please top up your account."
-
-            # 1. Try Bytez
+            # 1. Bytez Generation (Primary)
             if self.bytez_client:
                 try:
-                    # Choose gpt-4o model
-                    logger.info(f"Generating response for prompt: {prompt[:50]}...")
-                    model = self.bytez_client.model("openai/gpt-4o")
+                    full_prompt = f"{context}\n\nQuestion: {prompt}" if context else prompt
+                    response = self.bytez_client.model("openai/gpt-4o").run(full_prompt)
                     
-                    # Prepare messages
-                    messages = []
-                    if context:
-                        messages.append({"role": "system", "content": context})
-                    messages.append({"role": "user", "content": prompt})
-                    
-                    # Generate response
-                    logger.info("Calling Bytez API...")
-                    result = model.run(messages)
-                    
-                    if hasattr(result, 'error') and result.error:
-                        # Return error directly, do not fallback
-                        raise Exception(f"Bytez GPT-4o error: {result.error}")
-                    
-                    if hasattr(result, 'output'):
-                        return result.output
-                    return str(result)
+                    # Handle Bytez response structure
+                    if hasattr(response, 'output'):
+                        return response.output
+                    elif isinstance(response, str):
+                        return response
+                    else:
+                        return str(response)
+                        
                 except Exception as e:
-                    logger.warning(f"Bytez generation failed: {e}")
-                    raise e # Re-raise to show the actual Bytez error
-
-            # 2. Gemini Disabled
-            if self.gemini_model:
-                pass
+                    logger.error(f"Bytez generation failed: {e}")
+                    # Fallback to mock if Bytez fails
+            
+            # 2. Google Gemini (Disabled)
+            # if self.gemini_model: ...
 
             # 3. Mock Response
-            else:
-                logger.warning("No AI client initialized. Returning mock response.")
-                return f"AI Service Unavailable: Please configure LIGHTNING_API_KEY or BYTEZ_API_KEY."
+            logger.warning("No AI client initialized. Returning mock response.")
+            return f"This is a simulated AI response to your question: '{prompt}'. Please configure BYTEZ_API_KEY."
             
         except Exception as e:
             logger.error(f"Error generating AI response: {str(e)}", exc_info=True)
