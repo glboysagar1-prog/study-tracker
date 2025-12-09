@@ -11,6 +11,13 @@ except ImportError:
     BYTEZ_AVAILABLE = False
     Bytez = None
 
+try:
+    from openai import OpenAI
+    OPENAI_AVAILABLE = True
+except ImportError:
+    OPENAI_AVAILABLE = False
+    OpenAI = None
+
 # Google Gemini removed as per user request
 GOOGLE_AVAILABLE = False
 genai = None
@@ -36,28 +43,34 @@ class EnhancedGTUAgent:
     Advanced AI Agent with video summarization, flashcards, voice, and more
     """
     
-    def __init__(self, bytez_key=None, google_key=None, supabase_url=None, supabase_key=None):
+    def __init__(self, bytez_key=None, google_key=None, lightning_key=None, supabase_url=None, supabase_key=None):
         # Initialize Bytez if available
         self.sdk = None
         self.llm = None
         self.gemini_model = None
+        self.lightning_client = None
         
-        # 1. Try Bytez first
-        if BYTEZ_AVAILABLE and Bytez and bytez_key:
+        # 0. Try Lightning AI (Primary as per user request)
+        lightning_key = lightning_key or os.getenv("LIGHTNING_API_KEY")
+        if lightning_key and OPENAI_AVAILABLE:
+            try:
+                self.lightning_client = OpenAI(
+                    api_key=lightning_key,
+                    base_url="https://lightning.ai/api/v1"
+                )
+                print("✓ Lightning AI initialized")
+            except Exception as e:
+                print(f"✗ Lightning AI initialization failed: {e}")
+
+        # 1. Try Bytez first (Secondary)
+        if not self.lightning_client and BYTEZ_AVAILABLE and Bytez and bytez_key:
             try:
                 self.sdk = Bytez(bytez_key)
                 self.llm = self.sdk.model("openai/gpt-4o")
                 print("✓ Bytez AI initialized")
             except Exception as e:
                 print(f"✗ Bytez initialization failed: {e}")
-        
-        if BYTEZ_AVAILABLE and Bytez and bytez_key:
-            try:
-                self.sdk = Bytez(bytez_key)
-                self.llm = self.sdk.model("openai/gpt-4o")
-                print("✓ Bytez AI initialized")
-            except Exception as e:
-                print(f"✗ Bytez initialization failed: {e}")
+
                 
         # Google Gemini disabled
         self.gemini_model = None
@@ -280,7 +293,32 @@ Generate all {count} cards now."""
         return f"🗂️ Generated {len(flashcards)} flashcards for {topic}\n\n{flashcards_text}"
     
     def _run_messages(self, messages):
-        """Run with fallback: Bytez -> Gemini"""
+        """Run with fallback: Lightning -> Bytez -> Gemini"""
+        # 0. Try Lightning AI
+        if self.lightning_client:
+            try:
+                # We use a default model, but flexible to change
+                response = self.lightning_client.chat.completions.create(
+                    model="gpt-4o", # Lightning AI supports standard aliases
+                    messages=messages
+                )
+                
+                content = response.choices[0].message.content
+                
+                class AIResponse:
+                    def __init__(self, output): self.output = output; self.error = None
+                return AIResponse(content)
+                
+            except Exception as e:
+                print(f"⚠️ Lightning AI exception: {e}")
+                # If it's a payment issue (402), we should probably let the user know specifically
+                # rather than silently falling back if they expect Lightning to work.
+                # However, for robustness, we fall through if Bytez is available.
+                if "402" in str(e) or "insufficient_balance" in str(e):
+                    class ErrorResponse:
+                        def __init__(self, err): self.error = f"Lightning AI: Insufficient Credits. Please top up your account. {str(err)}"; self.output = None
+                    return ErrorResponse(e)
+
         # 1. Try Bytez
         if self.llm:
             try:
@@ -294,9 +332,6 @@ Generate all {count} cards now."""
                 return response
             except Exception as e:
                 print(f"⚠️ Bytez exception: {e}")
-                # If strict Bytez mode is desired, we could stop here. 
-                # But if there's a hard crash in Bytez, we might want to let it fail 
-                # so the user sees the error rather than a confusing Gemini limit.
                 class ErrorResponse:
                     def __init__(self, err): self.error = f"Bytez Error: {str(err)}"; self.output = None
                 return ErrorResponse(e)
