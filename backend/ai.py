@@ -80,7 +80,7 @@ class AIProcessor:
             # 3. Mock Response
             else:
                 logger.warning("No AI client initialized. Returning mock response.")
-                return f"This is a simulated AI response to your question: '{prompt}'. Please configure BYETZ_API_KEY or GOOGLE_API_KEY."
+                return f"This is a simulated AI response to your question: '{prompt}'. Please configure BYTEZ_API_KEY."
             
         except Exception as e:
             logger.error(f"Error generating AI response: {str(e)}", exc_info=True)
