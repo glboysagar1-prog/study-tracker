@@ -62,8 +62,13 @@ class AIProcessor:
             # 1. Bytez Generation (Primary)
             if self.bytez_client:
                 try:
-                    full_prompt = f"{context}\n\nQuestion: {prompt}" if context else prompt
-                    response = self.bytez_client.model("openai/gpt-4o").run(full_prompt)
+                    # Format as messages list as required by the API
+                    messages = []
+                    if context:
+                        messages.append({"role": "system", "content": context})
+                    messages.append({"role": "user", "content": prompt})
+                    
+                    response = self.bytez_client.model("openai/gpt-4o").run(messages)
                     
                     # Debug: Log raw response using print for visibility
                     print(f"DEBUG: Bytez raw response type: {type(response)}", flush=True)
