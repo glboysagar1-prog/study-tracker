@@ -72,15 +72,17 @@ class AIProcessor:
                     result = model.run(messages)
                     
                     if hasattr(result, 'error') and result.error:
+                        # Return error directly, do not fallback
                         raise Exception(f"Bytez GPT-4o error: {result.error}")
                     
                     if hasattr(result, 'output'):
                         return result.output
                     return str(result)
                 except Exception as e:
-                    logger.warning(f"Bytez generation failed: {e}. Falling back to Gemini.")
+                    logger.warning(f"Bytez generation failed: {e}")
+                    raise e # Re-raise to show the actual Bytez error
 
-            # 2. Try Gemini (Fallback or Primary if Bytez unavailable)
+            # 2. Try Gemini (Only if Bytez is not initialized)
             if self.gemini_model:
                 try:
                     logger.info(f"Generating response using Gemini for prompt: {prompt[:50]}...")

@@ -287,13 +287,23 @@ Generate all {count} cards now."""
         if self.llm:
             try:
                 response = self.llm.run(messages)
-                if not response.error:
-                    return response
-                print(f"⚠️ Bytez error: {response.error}")
+                
+                # If Bytez has an error, return it directly instead of falling back
+                if hasattr(response, 'error') and response.error:
+                     print(f"⚠️ Bytez returned error: {response.error}")
+                     return response
+                
+                return response
             except Exception as e:
                 print(f"⚠️ Bytez exception: {e}")
+                # If strict Bytez mode is desired, we could stop here. 
+                # But if there's a hard crash in Bytez, we might want to let it fail 
+                # so the user sees the error rather than a confusing Gemini limit.
+                class ErrorResponse:
+                    def __init__(self, err): self.error = f"Bytez Error: {str(err)}"; self.output = None
+                return ErrorResponse(e)
 
-        # 2. Fallback to Gemini
+        # 2. Fallback to Gemini ONLY if Bytez is NOT configured (self.llm is None)
         if self.gemini_model:
             try:
                 # Gemini simplified: last message as prompt
