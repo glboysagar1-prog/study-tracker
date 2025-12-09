@@ -78,7 +78,12 @@ class AIProcessor:
                     final_response = ""
                     # Handle Bytez response structure
                     if hasattr(response, 'output'):
-                        final_response = response.output
+                        raw_output = response.output
+                        if isinstance(raw_output, dict):
+                            # It returns {'role': 'assistant', 'content': '...'}
+                            final_response = raw_output.get('content', '')
+                        else:
+                            final_response = raw_output
                     elif isinstance(response, str):
                         final_response = response
                     else:
@@ -86,6 +91,7 @@ class AIProcessor:
                     
                     if not final_response:
                         print("DEBUG: Final response text is empty!", flush=True)
+                        print(f"DEBUG: Output was: {response.output if hasattr(response, 'output') else 'No output attr'}", flush=True)
                         return "Error: The AI operation completed but returned no text. This might be a model availability issue."
                         
                     return final_response
