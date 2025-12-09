@@ -6,9 +6,11 @@ from dotenv import load_dotenv
 try:
     from bytez import Bytez
     BYTEZ_AVAILABLE = True
-except ImportError:
+    logging.info("✓ Bytez library imported successfully")
+except ImportError as e:
     BYTEZ_AVAILABLE = False
     Bytez = None
+    logging.error(f"✗ Bytez import failed: {e}")
 
 # Mock OpenAI for Lightning AI if needed
 try:
@@ -73,7 +75,8 @@ class AIProcessor:
             # if self.gemini_model: ...
 
             # 3. Mock Response
-            logger.warning("No AI client initialized. Returning mock response.")
+            bytez_api_key = os.environ.get('BYTEZ_API_KEY') # Re-fetch or pass as arg if needed, for logging context
+            logger.warning(f"No AI client initialized. Returning mock response. Key={bool(bytez_api_key)}, Lib={BYTEZ_AVAILABLE}")
             debug_info = f"[Debug: Key={bool(bytez_api_key)}, Lib={BYTEZ_AVAILABLE}]"
             return f"This is a simulated AI response to your question: '{prompt}'. Please configure BYTEZ_API_KEY. {debug_info}"
             
