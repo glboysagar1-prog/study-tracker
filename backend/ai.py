@@ -44,7 +44,7 @@ class AIProcessor:
         if not self.bytez_client and GOOGLE_AVAILABLE and google_api_key:
             try:
                 genai.configure(api_key=google_api_key)
-                self.gemini_model = genai.GenerativeModel('gemini-pro')
+                self.gemini_model = genai.GenerativeModel('gemini-1.5-flash')
                 logger.info("Google Gemini client initialized")
             except Exception as e:
                 logger.warning(f"Failed to initialize Google Gemini: {e}")

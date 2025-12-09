@@ -59,7 +59,7 @@ class EnhancedGTUAgent:
         if not self.llm and GOOGLE_AVAILABLE and genai and google_key:
             try:
                 genai.configure(api_key=google_key)
-                self.gemini_model = genai.GenerativeModel('gemini-pro')
+                self.gemini_model = genai.GenerativeModel('gemini-1.5-flash')
                 print("✓ Google Gemini AI initialized")
             except Exception as e:
                 print(f"✗ Google Gemini initialization failed: {e}")
