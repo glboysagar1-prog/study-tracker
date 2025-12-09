@@ -6,9 +6,12 @@ from dotenv import load_dotenv
 try:
     from bytez import Bytez
     BYTEZ_AVAILABLE = True
-except ImportError:
+    logging.info("✓ Bytez library imported successfully")
+except ImportError as e:
     BYTEZ_AVAILABLE = False
     Bytez = None
+    logging.warning(f"✗ Bytez library import failed: {e}")
+    logging.warning("This usually means the bytez package is not installed or has dependency issues")
 
 # Google Gemini removed as per user request
 GOOGLE_AVAILABLE = False
