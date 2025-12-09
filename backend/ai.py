@@ -2,6 +2,13 @@ import os
 import logging
 from dotenv import load_dotenv
 
+# Try to import bytez with verbose debugging
+try:
+    import bytez
+    try:
+        from bytez import Bytez
+        BYTEZ_AVAILABLE = True
+        logging.info(f"✓ Bytez library imported successfully. Version: {getattr(bytez, '__version__', 'unknown')}")
 # Try to import bytez, but make it optional
 try:
     from bytez import Bytez
@@ -9,7 +16,15 @@ try:
 except ImportError:
     BYTEZ_AVAILABLE = False
     Bytez = None
-    logging.warning("Bytez library not found")
+    # Switched to info to avoid startling user
+    # logging.info("Bytez library not found (optional)")
+
+try:
+    from openai import OpenAI
+    OPENAI_AVAILABLE = True
+except ImportError:
+    OPENAI_AVAILABLE = False
+    OpenAI = None
 
 # Google Gemini removed as per user request
 GOOGLE_AVAILABLE = False
@@ -26,8 +41,21 @@ class AIProcessor:
     def __init__(self):
         self.bytez_client = None
         self.gemini_model = None
+        self.lightning_client = None
         
-        # Initialize Bytez client if API key is available
+        # 0. Initialize Lightning AI (Primary)
+        lightning_key = os.environ.get('LIGHTNING_API_KEY')
+        if lightning_key and OPENAI_AVAILABLE:
+            try:
+                self.lightning_client = OpenAI(
+                    api_key=lightning_key,
+                    base_url="https://lightning.ai/api/v1"
+                )
+                logger.info("Lightning AI initialized in AIProcessor")
+            except Exception as e:
+                logger.warning(f"Failed to initialize Lightning AI: {e}")
+
+        # 1. Initialize Bytez client (Secondary)
         bytez_api_key = os.environ.get('BYTEZ_API_KEY')
         if bytez_api_key and BYTEZ_AVAILABLE:
             try:
@@ -41,9 +69,29 @@ class AIProcessor:
     
     def generate_response(self, prompt, context=None):
         """
-        Generate AI response using GPT-4o via Bytez or Gemini
+        Generate AI response using Lightning AI or Bytez
         """
         try:
+            # 0. Try Lightning AI
+            if self.lightning_client:
+                try:
+                    logger.info(f"Using Lightning AI for prompt: {prompt[:50]}...")
+                    messages = []
+                    if context:
+                        messages.append({"role": "system", "content": context})
+                    messages.append({"role": "user", "content": prompt})
+                    
+                    response = self.lightning_client.chat.completions.create(
+                        model="gpt-4o",
+                        messages=messages
+                    )
+                    content = response.choices[0].message.content
+                    return content
+                except Exception as e:
+                    logger.warning(f"Lightning AI generation failed: {e}")
+                    if "402" in str(e) or "insufficient_balance" in str(e):
+                        return f"Lightning AI Error: Insufficient Credits. Please top up your account."
+
             # 1. Try Bytez
             if self.bytez_client:
                 try:
@@ -79,7 +127,7 @@ class AIProcessor:
             # 3. Mock Response
             else:
                 logger.warning("No AI client initialized. Returning mock response.")
-                return f"This is a simulated AI response to your question: '{prompt}'. Please configure BYTEZ_API_KEY."
+                return f"AI Service Unavailable: Please configure LIGHTNING_API_KEY or BYTEZ_API_KEY."
             
         except Exception as e:
             logger.error(f"Error generating AI response: {str(e)}", exc_info=True)
