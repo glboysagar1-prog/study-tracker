@@ -16,6 +16,8 @@ services:
         sync: false
       - key: GOOGLE_API_KEY
         sync: false
+      - key: BYTEZ_API_KEY
+        sync: false
     healthCheckPath: /api/subjects
 
   # FastAPI AI Agent Service
