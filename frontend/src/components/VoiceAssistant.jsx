@@ -8,7 +8,8 @@ const VoiceAssistant = () => {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const [language, setLanguage] = useState('en')
-  
+
+  const [autoPlay, setAutoPlay] = useState(true)
   const mediaRecorderRef = useRef(null)
   const audioChunksRef = useRef([])
 
@@ -64,7 +65,7 @@ const VoiceAssistant = () => {
 
       if (transcriptionResponse.data.success) {
         setTranscription(transcriptionResponse.data.transcription)
-        
+
         // Ask AI question
         const questionResponse = await axios.post('/api/voice/question', formData, {
           headers: {
@@ -84,16 +85,16 @@ const VoiceAssistant = () => {
     }
   }
 
-  const handleTextToSpeech = async () => {
-    if (!aiResponse) return
+  const handleTextToSpeech = async (text) => {
+    const textToSpeak = text || aiResponse
+    if (!textToSpeak) return
 
     try {
-      const response = await axios.post('/api/voice/tts', 
-        { text: aiResponse },
+      const response = await axios.post('/api/voice/tts',
+        { text: textToSpeak },
         { responseType: 'blob' }
       )
-      
-      // Play the audio
+
       const audioUrl = URL.createObjectURL(response.data)
       const audio = new Audio(audioUrl)
       audio.play()
@@ -103,15 +104,22 @@ const VoiceAssistant = () => {
     }
   }
 
+  // Auto-play effect
+  React.useEffect(() => {
+    if (aiResponse && autoPlay && !isLoading) {
+      handleTextToSpeech(aiResponse)
+    }
+  }, [aiResponse, autoPlay, isLoading])
+
   return (
     <div className="max-w-2xl mx-auto p-6">
       <div className="bg-white rounded-lg shadow-lg p-6">
         <h2 className="text-2xl font-bold mb-6 text-center">Voice-Based AI Study Assistant</h2>
-        
+
         <div className="mb-6">
           <label className="block text-gray-700 mb-2">Language</label>
-          <select 
-            value={language} 
+          <select
+            value={language}
             onChange={(e) => setLanguage(e.target.value)}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
@@ -120,15 +128,14 @@ const VoiceAssistant = () => {
             <option value="gu">Gujarati</option>
           </select>
         </div>
-        
+
         <div className="flex flex-col items-center mb-6">
           <button
             onClick={isRecording ? stopRecording : startRecording}
-            className={`${
-              isRecording 
-                ? 'bg-red-500 hover:bg-red-600' 
-                : 'bg-blue-500 hover:bg-blue-600'
-            } text-white font-bold py-3 px-6 rounded-full mb-4 transition duration-300 ease-in-out transform hover:scale-105`}
+            className={`${isRecording
+              ? 'bg-red-500 hover:bg-red-600'
+              : 'bg-blue-500 hover:bg-blue-600'
+              } text-white font-bold py-3 px-6 rounded-full mb-4 transition duration-300 ease-in-out transform hover:scale-105`}
           >
             {isRecording ? (
               <div className="flex items-center">
@@ -139,26 +146,38 @@ const VoiceAssistant = () => {
               'Start Recording'
             )}
           </button>
-          
+
           <p className="text-gray-600 text-sm">
-            {isRecording 
-              ? 'Recording... Speak your question' 
+            {isRecording
+              ? 'Recording... Speak your question'
               : 'Click to start recording your question'}
           </p>
         </div>
-        
+
+        <div className="flex justify-center mb-6">
+          <label className="flex items-center space-x-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={autoPlay}
+              onChange={(e) => setAutoPlay(e.target.checked)}
+              className="form-checkbox h-5 w-5 text-blue-600 rounded focus:ring-blue-500 border-gray-300 transition duration-150 ease-in-out"
+            />
+            <span className="text-gray-700 font-medium select-none">Auto-play response</span>
+          </label>
+        </div>
+
         {isLoading && (
           <div className="flex justify-center my-4">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
           </div>
         )}
-        
+
         {error && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
             {error}
           </div>
         )}
-        
+
         {transcription && (
           <div className="mb-6">
             <h3 className="text-lg font-semibold mb-2">Your Question:</h3>
@@ -167,7 +186,7 @@ const VoiceAssistant = () => {
             </div>
           </div>
         )}
-        
+
         {aiResponse && (
           <div className="mb-6">
             <h3 className="text-lg font-semibold mb-2">AI Assistant Response:</h3>
@@ -182,7 +201,7 @@ const VoiceAssistant = () => {
             </button>
           </div>
         )}
-        
+
         <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mt-6">
           <div className="flex">
             <div className="flex-shrink-0">
