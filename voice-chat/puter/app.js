@@ -94,11 +94,24 @@ app.post("/v1/realtime/input", async (req, res) => {
         console.log(`TTS generated (${ttsB64.length} bytes base64)`);
 
         // 3. Push Audio to Gateway
-        await fetch(GATEWAY_PLAYBACK, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ audio_base64: ttsB64, conversation_id })
-        });
+        console.log(`Pushing audio to Gateway: ${GATEWAY_PLAYBACK}`);
+        try {
+            const playbackResp = await fetch(GATEWAY_PLAYBACK, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ audio_base64: ttsB64, conversation_id })
+            });
+
+            if (!playbackResp.ok) {
+                const errText = await playbackResp.text();
+                console.error("Gateway Playback Error:", playbackResp.status, errText);
+            } else {
+                const result = await playbackResp.json();
+                console.log("Gateway Playback Success:", result);
+            }
+        } catch (playbackErr) {
+            console.error("Failed to push to Gateway:", playbackErr.message);
+        }
 
         res.json({ ok: true, reply: replyText });
 
