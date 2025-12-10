@@ -29,46 +29,61 @@ app.post("/v1/realtime/input", async (req, res) => {
     if (!text) return res.status(400).json({ error: "missing text" });
 
     try {
-        // 1. Get Answer from LLM (Bytez)
+        // 1. Get Answer from LLM (Bytez) with fallback
         let replyText = "";
 
-        // Choose model - use openai/gpt-4o which works in backend/ai.py
-        const model = bytez.model("openai/gpt-4o");
+        // Models to try in order (fallback for rate limits)
+        const modelList = [
+            "openai/gpt-4o",
+            "meta-llama/Llama-3.3-70B-Instruct-Turbo",
+            "mistralai/Mistral-7B-Instruct-v0.3"
+        ];
 
         const messages = [
             { role: "system", content: "You are a helpful, concise voice assistant. Keep replies under 2 sentences." },
             { role: "user", content: text }
         ];
 
-        try {
-            const result = await model.run(messages);
+        let success = false;
+        for (const modelName of modelList) {
+            if (success) break;
 
-            // Debug: log full response structure
-            console.log("Bytez raw response:", JSON.stringify(result, null, 2));
+            try {
+                console.log(`Trying model: ${modelName}`);
+                const model = bytez.model(modelName);
+                const result = await model.run(messages);
 
-            // Based on backend/ai.py: response.output is { role: 'assistant', content: '...' }
-            if (result?.output) {
-                if (typeof result.output === 'string') {
-                    replyText = result.output;
-                } else if (result.output?.content) {
-                    // This is the expected format: { role: 'assistant', content: '...' }
-                    replyText = result.output.content;
-                } else {
-                    replyText = JSON.stringify(result.output);
+                console.log("Bytez response:", JSON.stringify(result, null, 2));
+
+                // Check for rate limit error
+                if (result?.error) {
+                    console.warn(`Model ${modelName} error:`, result.error);
+                    continue; // Try next model
                 }
-            } else if (result?.error) {
-                console.error("Bytez API Error:", result.error);
-                replyText = "Sorry, the AI service encountered an error.";
-            } else {
-                console.error("Unknown response format:", result);
-                replyText = "I received your message but couldn't generate a response.";
-            }
 
-            console.log("LLM Reply:", replyText);
-        } catch (llmError) {
-            console.error("LLM Error:", llmError);
-            replyText = "I'm sorry, I couldn't process that.";
+                // Extract response
+                if (result?.output) {
+                    if (typeof result.output === 'string') {
+                        replyText = result.output;
+                    } else if (result.output?.content) {
+                        replyText = result.output.content;
+                    } else {
+                        replyText = JSON.stringify(result.output);
+                    }
+                    success = true;
+                    console.log(`Success with ${modelName}: ${replyText}`);
+                }
+            } catch (modelErr) {
+                console.warn(`Model ${modelName} failed:`, modelErr.message);
+            }
         }
+
+        if (!success || !replyText) {
+            replyText = "I'm currently experiencing high traffic. Please wait a moment and try again.";
+        }
+
+        console.log("LLM Reply:", replyText);
+
 
         // 2. Synthesize TTS (Deepgram)
         console.log("Synthesizing TTS...");
