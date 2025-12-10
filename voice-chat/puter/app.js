@@ -43,12 +43,34 @@ app.post("/v1/realtime/input", async (req, res) => {
         ];
 
         try {
-            const output = await model.run(messages);
+            const result = await model.run(messages);
 
-            replyText = output?.output?.content || output?.output;
+            // Debug: log full response structure
+            console.log("Bytez raw response:", JSON.stringify(result, null, 2));
 
-            if (typeof replyText !== 'string') {
-                replyText = JSON.stringify(replyText);
+            // Handle different response structures
+            if (result?.output) {
+                if (typeof result.output === 'string') {
+                    replyText = result.output;
+                } else if (result.output?.content) {
+                    replyText = result.output.content;
+                } else if (result.output?.choices?.[0]?.message?.content) {
+                    replyText = result.output.choices[0].message.content;
+                } else if (result.output?.message?.content) {
+                    replyText = result.output.message.content;
+                } else {
+                    replyText = JSON.stringify(result.output);
+                }
+            } else if (result?.choices?.[0]?.message?.content) {
+                replyText = result.choices[0].message.content;
+            } else if (result?.message?.content) {
+                replyText = result.message.content;
+            } else if (result?.error) {
+                console.error("Bytez API Error:", result.error);
+                replyText = "Sorry, the AI service encountered an error.";
+            } else {
+                console.error("Unknown response format:", result);
+                replyText = "I received your message but couldn't generate a response.";
             }
 
             console.log("LLM Reply:", replyText);
