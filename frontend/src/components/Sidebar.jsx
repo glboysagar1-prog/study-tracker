@@ -1,8 +1,20 @@
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 const Sidebar = () => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, profile, signOut } = useAuth();
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      navigate('/login');
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  };
 
   const isActive = (path) => {
     if (path === '/dashboard') {
@@ -93,16 +105,35 @@ const Sidebar = () => {
 
       {/* User Section */}
       <div className="user-section">
-        <div className="user-profile">
-          <div className="user-avatar">S</div>
-          <div className="user-info">
-            <div className="user-name">Sagar</div>
-            <div className="user-role">Semester 4 • CSE</div>
+        {user ? (
+          <>
+            {/* Credit Balance Display */}
+            <div className="credit-display">
+              <span className="material-icons">bolt</span>
+              <span className="credit-amount">{profile?.ai_credits ?? 200}</span>
+              <span className="credit-label">AI Credits</span>
+            </div>
+
+            <div className="user-profile">
+              <div className="user-avatar">{profile?.username?.charAt(0)?.toUpperCase() || user.email?.charAt(0)?.toUpperCase() || 'U'}</div>
+              <div className="user-info">
+                <div className="user-name">{profile?.username || user.email?.split('@')[0]}</div>
+                <div className="user-role">
+                  {profile?.semester ? `Semester ${profile.semester}` : ''}
+                  {profile?.branch ? ` • ${profile.branch.split(' ')[0]}` : ''}
+                </div>
+              </div>
+              <button onClick={handleSignOut} className="logout-btn" title="Sign out">
+                <span className="material-icons">logout</span>
+              </button>
+            </div>
+          </>
+        ) : (
+          <div className="auth-buttons">
+            <Link to="/login" className="auth-btn login-btn">Sign In</Link>
+            <Link to="/register" className="auth-btn register-btn">Register</Link>
           </div>
-          <span className="material-icons" style={{ color: 'var(--text-secondary)', fontSize: '20px' }}>
-            more_vert
-          </span>
-        </div>
+        )}
       </div>
 
       <style jsx>{`
@@ -237,6 +268,86 @@ const Sidebar = () => {
         .user-role {
           font-size: 12px;
           color: var(--text-secondary);
+        }
+
+        .credit-display {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 12px 16px;
+          background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+          border-radius: 12px;
+          margin-bottom: 12px;
+        }
+
+        .credit-display .material-icons {
+          color: #78350f;
+          font-size: 20px;
+        }
+
+        .credit-amount {
+          font-size: 20px;
+          font-weight: 700;
+          color: #78350f;
+        }
+
+        .credit-label {
+          font-size: 12px;
+          color: #92400e;
+          margin-left: auto;
+        }
+
+        .logout-btn {
+          background: none;
+          border: none;
+          cursor: pointer;
+          padding: 8px;
+          border-radius: 8px;
+          color: var(--text-secondary);
+          transition: all 0.2s;
+        }
+
+        .logout-btn:hover {
+          background: #fee2e2;
+          color: #dc2626;
+        }
+
+        .auth-buttons {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          padding: 12px;
+        }
+
+        .auth-btn {
+          padding: 12px 16px;
+          border-radius: 8px;
+          text-align: center;
+          font-weight: 600;
+          font-size: 14px;
+          text-decoration: none;
+          transition: all 0.2s;
+        }
+
+        .login-btn {
+          background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+          color: white;
+        }
+
+        .login-btn:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+
+        .register-btn {
+          background: transparent;
+          border: 2px solid var(--primary);
+          color: var(--primary);
+        }
+
+        .register-btn:hover {
+          background: var(--primary);
+          color: white;
         }
       `}</style>
     </aside>

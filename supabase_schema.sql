@@ -2,13 +2,15 @@
 
 -- Create users table
 CREATE TABLE IF NOT EXISTS users (
-    id SERIAL PRIMARY KEY,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     username VARCHAR(80) UNIQUE NOT NULL,
     email VARCHAR(120) UNIQUE NOT NULL,
-    password_hash VARCHAR(128) NOT NULL,
+    password_hash VARCHAR(128),
     college VARCHAR(100),
     branch VARCHAR(100),
     semester VARCHAR(10),
+    ai_credits INTEGER DEFAULT 200,
+    total_ai_requests INTEGER DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

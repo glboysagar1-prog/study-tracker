@@ -1,5 +1,6 @@
 import React from 'react'
 import { BrowserRouter as Router, Routes, Route, useParams } from 'react-router-dom'
+import { AuthProvider } from './context/AuthContext'
 import Sidebar from './components/Sidebar'
 import Home from './components/Home'
 import Login from './components/Login'
@@ -50,41 +51,43 @@ function AppLayout({ children }) {
 
 function App() {
   return (
-    <Router>
-      <Routes>
-        {/* Public routes without sidebar */}
-        <Route path="/" element={<AppLayout><Dashboard /></AppLayout>} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
+    <AuthProvider>
+      <Router>
+        <Routes>
+          {/* Public routes without sidebar */}
+          <Route path="/" element={<AppLayout><Dashboard /></AppLayout>} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
 
-        {/* Protected routes with sidebar */}
-        <Route path="/dashboard" element={<AppLayout><Dashboard /></AppLayout>} />
-        <Route path="/subjects" element={<AppLayout><Subjects /></AppLayout>} />
-        <Route path="/syllabus/:subjectId" element={<AppLayout><SubjectLibrary /></AppLayout>} />
-        <Route path="/previous-papers/:subjectId" element={<AppLayout><PreviousPapers /></AppLayout>} />
-        <Route path="/mock-tests/:subjectId" element={<AppLayout><MockTests /></AppLayout>} />
-        <Route path="/mock-test/:testId" element={<AppLayout><MockTest /></AppLayout>} />
-        <Route path="/important-questions/:subjectId" element={<AppLayout><ImportantQuestions /></AppLayout>} />
-        <Route path="/voice-assistant" element={<AppLayout><VoiceAssistant /></AppLayout>} />
-        <Route path="/ai-assistant" element={<AppLayout><AIStudyAssistant /></AppLayout>} />
-        <Route path="/prepare-exam" element={<AppLayout><PrepareExam /></AppLayout>} />
-        <Route path="/upload-material" element={<AppLayout><MaterialUploadForm /></AppLayout>} />
-        <Route path="/browse" element={<AppLayout><SubjectBrowser /></AppLayout>} />
-        <Route path="/materials/:subjectCode" element={<AppLayout><MaterialViewerWrapper /></AppLayout>} />
-        <Route path="/realtime-voice" element={<AppLayout><RealTimeVoice /></AppLayout>} />
+          {/* Protected routes with sidebar */}
+          <Route path="/dashboard" element={<AppLayout><Dashboard /></AppLayout>} />
+          <Route path="/subjects" element={<AppLayout><Subjects /></AppLayout>} />
+          <Route path="/syllabus/:subjectId" element={<AppLayout><SubjectLibrary /></AppLayout>} />
+          <Route path="/previous-papers/:subjectId" element={<AppLayout><PreviousPapers /></AppLayout>} />
+          <Route path="/mock-tests/:subjectId" element={<AppLayout><MockTests /></AppLayout>} />
+          <Route path="/mock-test/:testId" element={<AppLayout><MockTest /></AppLayout>} />
+          <Route path="/important-questions/:subjectId" element={<AppLayout><ImportantQuestions /></AppLayout>} />
+          <Route path="/voice-assistant" element={<AppLayout><VoiceAssistant /></AppLayout>} />
+          <Route path="/ai-assistant" element={<AppLayout><AIStudyAssistant /></AppLayout>} />
+          <Route path="/prepare-exam" element={<AppLayout><PrepareExam /></AppLayout>} />
+          <Route path="/upload-material" element={<AppLayout><MaterialUploadForm /></AppLayout>} />
+          <Route path="/browse" element={<AppLayout><SubjectBrowser /></AppLayout>} />
+          <Route path="/materials/:subjectCode" element={<AppLayout><MaterialViewerWrapper /></AppLayout>} />
+          <Route path="/realtime-voice" element={<AppLayout><RealTimeVoice /></AppLayout>} />
 
-        {/* Resource Overview Routes */}
-        <Route path="/all-mock-tests" element={<AppLayout><AllMockTests /></AppLayout>} />
-        <Route path="/all-syllabus" element={<AppLayout><AllSyllabus /></AppLayout>} />
-        <Route path="/all-previous-papers" element={<AppLayout><AllPreviousPapers /></AppLayout>} />
-        <Route path="/all-important-questions" element={<AppLayout><AllImportantQuestions /></AppLayout>} />
-        <Route path="/all-lab-programs" element={<AppLayout><AllLabPrograms /></AppLayout>} />
-        <Route path="/all-video-tutorials" element={<AppLayout><AllVideoTutorials /></AppLayout>} />
+          {/* Resource Overview Routes */}
+          <Route path="/all-mock-tests" element={<AppLayout><AllMockTests /></AppLayout>} />
+          <Route path="/all-syllabus" element={<AppLayout><AllSyllabus /></AppLayout>} />
+          <Route path="/all-previous-papers" element={<AppLayout><AllPreviousPapers /></AppLayout>} />
+          <Route path="/all-important-questions" element={<AppLayout><AllImportantQuestions /></AppLayout>} />
+          <Route path="/all-lab-programs" element={<AppLayout><AllLabPrograms /></AppLayout>} />
+          <Route path="/all-video-tutorials" element={<AppLayout><AllVideoTutorials /></AppLayout>} />
 
-        <Route path="/analytics" element={<AppLayout><Analytics /></AppLayout>} />
-      </Routes>
-      <ChatBot />
-    </Router>
+          <Route path="/analytics" element={<AppLayout><Analytics /></AppLayout>} />
+        </Routes>
+        <ChatBot />
+      </Router>
+    </AuthProvider>
   )
 }
 

@@ -1,5 +1,6 @@
 import os
 import logging
+import requests
 from dotenv import load_dotenv
 
 # Try to import bytez (robust import)
@@ -38,7 +39,7 @@ load_dotenv()
 class AIProcessor:
     def __init__(self):
         self.bytez_client = None
-        self.gemini_model = None
+        self.groq_api_key = os.environ.get('GROQ_API_KEY')
         
         # Initialize Bytez client if API key is available
         bytez_api_key = os.environ.get('BYTEZ_API_KEY')
@@ -49,65 +50,90 @@ class AIProcessor:
                 logger.info("Bytez client initialized")
             except Exception as e:
                 logger.warning(f"Failed to initialize Bytez: {e}")
-
-        # Google Gemini Disabled
-        self.gemini_model = None
+        
+        if self.groq_api_key:
+            logger.info("Groq API key found (fallback enabled)")
+    
+    def _call_groq(self, messages):
+        """Call Groq API (super fast, reliable fallback)"""
+        try:
+            response = requests.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {self.groq_api_key}",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "model": "llama-3.3-70b-versatile",
+                    "messages": messages,
+                    "max_tokens": 1000,
+                    "temperature": 0.7
+                },
+                timeout=30
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                return data.get("choices", [{}])[0].get("message", {}).get("content", "")
+            else:
+                logger.warning(f"Groq API error: {response.status_code} - {response.text}")
+                return None
+        except Exception as e:
+            logger.error(f"Groq API call failed: {e}")
+            return None
     
     def generate_response(self, prompt, context="", model_type="gemini", image_parts=None):
         """
         Generate a response using the available AI model.
-        Prioritizes Bytez, falls back to mock response if configured.
+        Tries Bytez first, then Groq as fallback.
         """
+        messages = []
+        if context:
+            messages.append({"role": "system", "content": context})
+        messages.append({"role": "user", "content": prompt})
+        
         try:
             # 1. Bytez Generation (Primary)
             if self.bytez_client:
                 try:
-                    # Format as messages list as required by the API
-                    messages = []
-                    if context:
-                        messages.append({"role": "system", "content": context})
-                    messages.append({"role": "user", "content": prompt})
-                    
                     response = self.bytez_client.model("openai/gpt-4o").run(messages)
                     
-                    # Debug: Log raw response using print for visibility
-                    print(f"DEBUG: Bytez raw response type: {type(response)}", flush=True)
-                    print(f"DEBUG: Bytez raw response content: {response}", flush=True)
-                    print(f"DEBUG: Bytez raw response dir: {dir(response)}", flush=True)
+                    print(f"DEBUG: Bytez raw response: {response}", flush=True)
                     
                     final_response = ""
-                    # Handle Bytez response structure
                     if hasattr(response, 'output'):
                         raw_output = response.output
                         if isinstance(raw_output, dict):
-                            # It returns {'role': 'assistant', 'content': '...'}
                             final_response = raw_output.get('content', '')
                         else:
                             final_response = raw_output
                     elif isinstance(response, str):
                         final_response = response
-                    else:
-                        final_response = str(response)
                     
-                    if not final_response:
-                        print("DEBUG: Final response text is empty!", flush=True)
-                        print(f"DEBUG: Output was: {response.output if hasattr(response, 'output') else 'No output attr'}", flush=True)
-                        return "Error: The AI operation completed but returned no text. This might be a model availability issue."
-                        
-                    return final_response
+                    # Check for error in response
+                    if hasattr(response, 'error') and response.error:
+                        print(f"DEBUG: Bytez returned error: {response.error}", flush=True)
+                        final_response = ""  # Force fallback
+                    
+                    if final_response:
+                        return final_response
+                    else:
+                        print("DEBUG: Bytez returned empty, trying Groq fallback...", flush=True)
                         
                 except Exception as e:
                     logger.error(f"Bytez generation failed: {e}")
-                    # Fallback to mock if Bytez fails
             
-            # 2. Google Gemini (Disabled)
-            # if self.gemini_model: ...
+            # 2. Groq Fallback (if Bytez failed or returned empty)
+            if self.groq_api_key:
+                print("DEBUG: Trying Groq API fallback...", flush=True)
+                groq_response = self._call_groq(messages)
+                if groq_response:
+                    print(f"DEBUG: Groq success: {groq_response[:100]}...", flush=True)
+                    return groq_response
 
-            # 3. Mock Response
-            bytez_api_key = os.environ.get('BYTEZ_API_KEY') # Re-fetch or pass as arg if needed, for logging context
-            logger.warning(f"No AI client initialized. Returning mock response. Key={bool(bytez_api_key)}, Lib={BYTEZ_AVAILABLE}")
-            debug_info = f"[Debug: Key={bool(bytez_api_key)}, Lib={BYTEZ_AVAILABLE}]"
-            return f"This is a simulated AI response to your question: '{prompt}'. Please configure BYTEZ_API_KEY. {debug_info}"
+            # 3. Mock Response (last resort)
+            logger.warning("All AI providers failed. Returning error message.")
+            return "I'm sorry, the AI service is currently experiencing issues. Please try again in a moment."
             
         except Exception as e:
             logger.error(f"Error generating AI response: {str(e)}", exc_info=True)
