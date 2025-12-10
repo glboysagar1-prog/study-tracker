@@ -32,10 +32,8 @@ app.post("/v1/realtime/input", async (req, res) => {
         // 1. Get Answer from LLM (Bytez)
         let replyText = "";
 
-        // Choose model
-        // Assuming 'openai/gpt-4o' or 'meta-llama/Llama-3-70b-chat-hf'
-        // The user suggested 'gpt-streaming' but let's stick to what works for now or fallback
-        const model = bytez.model("openai/chatgpt-4o-latest");
+        // Choose model - use openai/gpt-4o which works in backend/ai.py
+        const model = bytez.model("openai/gpt-4o");
 
         const messages = [
             { role: "system", content: "You are a helpful, concise voice assistant. Keep replies under 2 sentences." },
@@ -48,23 +46,16 @@ app.post("/v1/realtime/input", async (req, res) => {
             // Debug: log full response structure
             console.log("Bytez raw response:", JSON.stringify(result, null, 2));
 
-            // Handle different response structures
+            // Based on backend/ai.py: response.output is { role: 'assistant', content: '...' }
             if (result?.output) {
                 if (typeof result.output === 'string') {
                     replyText = result.output;
                 } else if (result.output?.content) {
+                    // This is the expected format: { role: 'assistant', content: '...' }
                     replyText = result.output.content;
-                } else if (result.output?.choices?.[0]?.message?.content) {
-                    replyText = result.output.choices[0].message.content;
-                } else if (result.output?.message?.content) {
-                    replyText = result.output.message.content;
                 } else {
                     replyText = JSON.stringify(result.output);
                 }
-            } else if (result?.choices?.[0]?.message?.content) {
-                replyText = result.choices[0].message.content;
-            } else if (result?.message?.content) {
-                replyText = result.message.content;
             } else if (result?.error) {
                 console.error("Bytez API Error:", result.error);
                 replyText = "Sorry, the AI service encountered an error.";
