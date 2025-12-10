@@ -28,6 +28,7 @@ const Sidebar = () => {
     tools: [
       { path: '/ai-assistant', icon: 'smart_toy', label: 'AI Assistant' },
       { path: '/voice-assistant', icon: 'mic', label: 'Voice Assistant' },
+      { path: '/realtime-voice', icon: 'record_voice_over', label: 'Real-Time Voice' },
       { path: '/analytics', icon: 'insights', label: 'Analytics' },
     ],
   };
