@@ -16,6 +16,8 @@ services:
         sync: false
       - key: GOOGLE_API_KEY
         sync: false
+      - key: BYTEZ_API_KEY
+        sync: false
 
   # Voice Gateway Service
   - type: web
@@ -23,17 +25,13 @@ services:
     env: node
     region: oregon
     plan: free
-    repo: https://github.com/glboysagar1-prog/gtu-exam-prep
     buildCommand: "cd voice-chat/gateway && npm install"
     startCommand: "cd voice-chat/gateway && node server.js"
     envVars:
       - key: DEEPGRAM_API_KEY
         sync: false
       - key: PUTER_URL
-        fromService:
-          type: web
-          name: gtu-voice-puter
-          property: url
+        sync: false
 
   # Voice Puter Service
   - type: web
@@ -41,7 +39,6 @@ services:
     env: node
     region: oregon
     plan: free
-    repo: https://github.com/glboysagar1-prog/gtu-exam-prep
     buildCommand: "cd voice-chat/puter && npm install"
     startCommand: "cd voice-chat/puter && node app.js"
     envVars:
@@ -50,14 +47,7 @@ services:
       - key: DEEPGRAM_API_KEY
         sync: false
       - key: GATEWAY_PLAYBACK
-        fromService:
-          type: web
-          name: gtu-voice-gateway
-          envVarKey: RENDER_EXTERNAL_URL
-        value: "/playback"
-      - key: BYTEZ_API_KEY
         sync: false
-    healthCheckPath: /api/subjects
 
   # FastAPI AI Agent Service
   - type: web
