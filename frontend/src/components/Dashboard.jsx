@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-
+import { useAuth } from '../context/AuthContext';
 import { API_BASE_URL } from '../config/api';
 
 const Dashboard = () => {
+  const { user, profile } = useAuth();
   const [subjects, setSubjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({
@@ -78,10 +79,10 @@ const Dashboard = () => {
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-4xl font-extrabold text-gray-900 dark:text-white tracking-tight">
-            Welcome back, Sagar! <span className="animate-wave inline-block">👋</span>
+            Welcome back, {profile?.username || user?.email?.split('@')[0] || 'Student'}! <span className="animate-wave inline-block">👋</span>
           </h1>
           <p className="text-gray-500 dark:text-gray-400 mt-2 text-lg">
-            You've completed 3 topics today. Keep up the great work!
+            {profile ? `${profile.ai_credits} AI credits remaining` : "You've completed 3 topics today. Keep up the great work!"}
           </p>
         </div>
         <div className="flex gap-3">
