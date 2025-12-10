@@ -48,11 +48,27 @@ class VoiceProcessor:
                 print(f"Audio conversion warning: {conv_error}. Using original file.")
                 file_to_transcribe = audio_file_path
             
+            # Read file and convert to base64 data URI to avoid "Incorrect padding" error
+            import base64
+            with open(file_to_transcribe, "rb") as audio_file:
+                audio_content = audio_file.read()
+                base64_audio = base64.b64encode(audio_content).decode('utf-8')
+                # Create data URI (assuming WAV if converted, or try to detect)
+                # Bytez seems to handle data URIs well for other models
+                if file_to_transcribe.endswith('.wav'):
+                    mime_type = 'audio/wav'
+                elif file_to_transcribe.endswith('.webm'):
+                    mime_type = 'audio/webm'
+                else:
+                    mime_type = 'audio/wav' # Default fallback
+                
+                data_uri = f"data:{mime_type};base64,{base64_audio}"
+
             # Choose whisper-large-v3 model
             model = self.client.model("openai/whisper-large-v3")
             
-            # Run transcription - Bytez returns Response object
-            result = model.run(file_to_transcribe)
+            # Run transcription - Pass Data URI
+            result = model.run(data_uri)
             
             # Clean up converted file
             if converted_path and os.path.exists(converted_path):
