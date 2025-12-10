@@ -42,11 +42,21 @@ wss.on("connection", (ws, req) => {
             // on final, send final transcript to Puter orchestration
             if (data.is_final && alt.transcript.trim().length > 0) {
                 console.log("Final transcript:", alt.transcript);
+                console.log("Calling Puter at:", `${PUTER_URL}/v1/realtime/input`);
+
                 fetch(`${PUTER_URL}/v1/realtime/input`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ conversation_id: "local-1", text: alt.transcript })
-                }).catch(err => console.error("Puter Error:", err));
+                })
+                    .then(resp => {
+                        console.log("Puter response status:", resp.status);
+                        return resp.json();
+                    })
+                    .then(data => {
+                        console.log("Puter response:", data);
+                    })
+                    .catch(err => console.error("Puter Error:", err.message));
             }
         }
     };
