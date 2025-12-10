@@ -112,9 +112,28 @@ class VoiceProcessor:
                 raise Exception(f"Bytez API error: {result.error}")
             
             # Return audio content from output attribute
-            return result.output
+            output = result.output
+            
+            # Handle different output types
+            if isinstance(output, str):
+                # Check if it's base64 (common for APIs)
+                try:
+                    import base64
+                    # simple check if likely base64
+                    return base64.b64decode(output)
+                except Exception:
+                    # If not valid base64, maybe it's a URL or raw text error
+                    # But for now, try encoding to bytes if it looks like raw data was decoded to str (rare for audio)
+                    return output.encode('utf-8')
+            elif isinstance(output, bytes):
+                return output
+            else:
+                # Fallback
+                return str(output).encode('utf-8')
             
         except Exception as e:
+            import logging
+            logging.error(f"TTS Error Details: {str(e)}")
             raise Exception(f"Text-to-speech failed: {str(e)}")
 
 # Global voice processor instance
