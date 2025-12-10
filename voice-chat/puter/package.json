@@ -1,0 +1,14 @@
+{
+    "name": "puter",
+    "version": "1.0.0",
+    "type": "module",
+    "dependencies": {
+        "express": "^4.18.2",
+        "bytez.js": "latest",
+        "node-fetch": "^3.3.1",
+        "dotenv": "^16.0.0"
+    },
+    "scripts": {
+        "start": "node app.js"
+    }
+}

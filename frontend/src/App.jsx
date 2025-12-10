@@ -28,6 +28,7 @@ import AllImportantQuestions from './components/AllImportantQuestions';
 import AllLabPrograms from './components/AllLabPrograms';
 import AllVideoTutorials from './components/AllVideoTutorials';
 import PrepareExam from './components/PrepareExam';
+import RealTimeVoice from './components/RealTimeVoice';
 
 // Wrapper component for MaterialViewer to extract subjectCode from URL
 function MaterialViewerWrapper() {
@@ -70,6 +71,7 @@ function App() {
         <Route path="/upload-material" element={<AppLayout><MaterialUploadForm /></AppLayout>} />
         <Route path="/browse" element={<AppLayout><SubjectBrowser /></AppLayout>} />
         <Route path="/materials/:subjectCode" element={<AppLayout><MaterialViewerWrapper /></AppLayout>} />
+        <Route path="/realtime-voice" element={<AppLayout><RealTimeVoice /></AppLayout>} />
 
         {/* Resource Overview Routes */}
         <Route path="/all-mock-tests" element={<AppLayout><AllMockTests /></AppLayout>} />

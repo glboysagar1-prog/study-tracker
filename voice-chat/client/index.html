@@ -1,0 +1,44 @@
+<!doctype html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>Voice Chat Client</title>
+    <style>
+        body {
+            font-family: monospace;
+            max-width: 600px;
+            margin: 2rem auto;
+            text-align: center;
+        }
+
+        #btn {
+            padding: 1rem 2rem;
+            font-size: 1.2rem;
+            cursor: pointer;
+        }
+
+        #transcript {
+            margin-top: 1rem;
+            white-space: pre-wrap;
+            text-align: left;
+            background: #f0f0f0;
+            padding: 1rem;
+            min-height: 100px;
+        }
+    </style>
+</head>
+
+<body>
+    <h2>Deepgram + Bytez Voice Chat</h2>
+    <p>Speak clearly. Transcript and reply will appear below.</p>
+
+    <button id="btn">Start</button>
+
+    <div id="transcript">Waiting specifically to start...</div>
+    <div id="status" style="margin-top:0.5rem; color:#666;"></div>
+
+    <script src="client.js"></script>
+</body>
+
+</html>
