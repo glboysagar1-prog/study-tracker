@@ -7,6 +7,7 @@ This script removes low-quality or outdated materials and adds fresh content.
 import os
 from dotenv import load_dotenv
 from supabase import create_client
+import uuid
 
 load_dotenv()
 
@@ -44,28 +45,20 @@ def clear_useless_materials():
                 
         except Exception as e:
             print(f"  ✗ Error cleaning {table}: {e}")
+    
+    # Also remove KhudkiBook materials specifically
+    try:
+        print("  Removing KhudkiBook materials...")
+        khudki_result = supabase.table("notes").delete().eq("source_name", "KhudkiBook").execute()
+        print(f"  ✓ Removed KhudkiBook materials")
+    except Exception as e:
+        print(f"  ✗ Error removing KhudkiBook materials: {e}")
 
 def add_fresh_materials():
     """Add fresh, high-quality study materials"""
     print("\n🆕 Adding fresh study materials...")
     
-    # Sample Computer Engineering subjects
-    subjects = [
-        {
-            "subject_code": "3140703",
-            "subject_name": "Database Management Systems",
-            "branch": "Computer Engineering",
-            "semester": 4
-        },
-        {
-            "subject_code": "3150713",
-            "subject_name": "Operating System",
-            "branch": "Computer Engineering", 
-            "semester": 5
-        }
-    ]
-    
-    # Add fresh notes
+    # Add fresh notes with unique content hashes
     notes_data = [
         {
             "subject_code": "3140703",
@@ -76,7 +69,7 @@ def add_fresh_materials():
             "file_url": "https://drive.google.com/file/d/1example1/view",
             "source_url": "https://www.gtustudy.com/dbms/unit1",
             "source_name": "GTUStudy - Verified",
-            "content_hash": "fresh_hash_dbms_001",
+            "content_hash": str(uuid.uuid4()),
             "downloads": 0,
             "views": 0
         },
@@ -89,7 +82,20 @@ def add_fresh_materials():
             "file_url": "https://drive.google.com/file/d/1example2/view",
             "source_url": "https://www.gtumaterial.com/dbms/unit2",
             "source_name": "GTUMaterial - Curated",
-            "content_hash": "fresh_hash_dbms_002",
+            "content_hash": str(uuid.uuid4()),
+            "downloads": 0,
+            "views": 0
+        },
+        {
+            "subject_code": "3140703",
+            "subject_name": "Database Management Systems",
+            "unit": 3,
+            "title": "SQL and Query Processing",
+            "description": "SQL syntax, joins, and query optimization techniques",
+            "file_url": "https://drive.google.com/file/d/1example3/view",
+            "source_url": "https://www.gtustudy.com/dbms/unit3",
+            "source_name": "GTUStudy - Verified",
+            "content_hash": str(uuid.uuid4()),
             "downloads": 0,
             "views": 0
         },
@@ -99,10 +105,23 @@ def add_fresh_materials():
             "unit": 1,
             "title": "Introduction to Operating Systems",
             "description": "Overview of OS functions, types, and system structure",
-            "file_url": "https://drive.google.com/file/d/1example3/view",
+            "file_url": "https://drive.google.com/file/d/1example4/view",
             "source_url": "https://www.gtustudy.com/os/unit1",
             "source_name": "GTUStudy - Verified",
-            "content_hash": "fresh_hash_os_001",
+            "content_hash": str(uuid.uuid4()),
+            "downloads": 0,
+            "views": 0
+        },
+        {
+            "subject_code": "3150713",
+            "subject_name": "Operating System",
+            "unit": 2,
+            "title": "Process Management and Scheduling",
+            "description": "Process concept, scheduling algorithms, and inter-process communication",
+            "file_url": "https://drive.google.com/file/d/1example5/view",
+            "source_url": "https://www.gtumaterial.com/os/unit2",
+            "source_name": "GTUMaterial - Curated",
+            "content_hash": str(uuid.uuid4()),
             "downloads": 0,
             "views": 0
         }
@@ -118,7 +137,7 @@ def add_fresh_materials():
             "difficulty": "medium",
             "frequency": 5,
             "last_asked_year": 2024,
-            "answer_text": "The three-schema architecture provides data independence by separating user applications from physical storage...",
+            "answer_text": "The three-schema architecture provides data independence by separating user applications from physical storage. It consists of external schema (user view), conceptual schema (logical structure), and internal schema (physical storage).",
             "source_url": "https://www.gtustudy.com/dbms/important-questions",
             "source_name": "GTUStudy - Exam Focused"
         },
@@ -130,9 +149,33 @@ def add_fresh_materials():
             "difficulty": "high",
             "frequency": 4,
             "last_asked_year": 2024,
-            "answer_text": "Entity-Relationship model is a conceptual data model that represents entities and their relationships...",
+            "answer_text": "Entity-Relationship model is a conceptual data model that represents entities and their relationships. Entities are represented as rectangles, attributes as ellipses, and relationships as diamonds.",
             "source_url": "https://www.gtumaterial.com/dbms/er-model",
             "source_name": "GTUMaterial - Detailed"
+        },
+        {
+            "subject_code": "3140703",
+            "unit": 3,
+            "question_text": "Explain SQL JOIN operations with examples.",
+            "marks": 7,
+            "difficulty": "medium",
+            "frequency": 6,
+            "last_asked_year": 2024,
+            "answer_text": "SQL JOIN operations combine rows from two or more tables based on a related column. Types include INNER JOIN, LEFT JOIN, RIGHT JOIN, and FULL OUTER JOIN.",
+            "source_url": "https://www.gtustudy.com/dbms/sql-joins",
+            "source_name": "GTUStudy - Practical Examples"
+        },
+        {
+            "subject_code": "3150713",
+            "unit": 1,
+            "question_text": "Define operating system. Explain its objectives and functions.",
+            "marks": 7,
+            "difficulty": "medium",
+            "frequency": 5,
+            "last_asked_year": 2024,
+            "answer_text": "An operating system is system software that manages computer hardware and software resources. Its objectives include convenience, efficiency, and ability to evolve.",
+            "source_url": "https://www.gtustudy.com/os/introduction",
+            "source_name": "GTUStudy - Fundamental Concepts"
         }
     ]
     
@@ -149,6 +192,30 @@ def add_fresh_materials():
             "isbn": "978-0078022159",
             "description": "Comprehensive textbook covering all DBMS concepts with practical examples",
             "source_name": "Academic Publishers"
+        },
+        {
+            "subject_code": "3140703",
+            "subject_name": "Database Management Systems",
+            "title": "Fundamentals of Database Systems - 7th Edition",
+            "author": "Ramez Elmasri",
+            "material_type": "book",
+            "url": "https://example.com/fundamentals-db-book",
+            "publisher": "Pearson",
+            "isbn": "978-0133970749",
+            "description": "In-depth coverage of database design and implementation",
+            "source_name": "Academic Publishers"
+        },
+        {
+            "subject_code": "3150713",
+            "subject_name": "Operating System",
+            "title": "Operating System Concepts - 10th Edition",
+            "author": "Abraham Silberschatz",
+            "material_type": "book",
+            "url": "https://example.com/os-concepts-book",
+            "publisher": "Wiley",
+            "isbn": "978-1119320913",
+            "description": "Comprehensive guide to operating system principles and practice",
+            "source_name": "Academic Publishers"
         }
     ]
     
@@ -162,6 +229,24 @@ def add_fresh_materials():
             "topic": "Database System Concepts and Architecture",
             "content": "Introduction and Application of DBMS, Purpose of Database Systems, View of Data, Database Languages, Database Users, Implications of Database Approach, When not to use a DBMS, Three-Schema Architecture and Data Independence.",
             "source_url": "https://example.com/dbms-syllabus"
+        },
+        {
+            "subject_code": "3140703",
+            "subject_name": "Database Management Systems",
+            "unit": 2,
+            "unit_title": "Data Modeling",
+            "topic": "ER Model and Relational Model",
+            "content": "ER Model - Entities, Attributes, Relationships, Constraints, Reduction of ER Diagrams to Tables. Relational Model - Concepts, Integrity Constraints, ER to Relational Mapping.",
+            "source_url": "https://example.com/dbms-data-modeling"
+        },
+        {
+            "subject_code": "3150713",
+            "subject_name": "Operating System",
+            "unit": 1,
+            "unit_title": "Introduction to Operating Systems",
+            "topic": "Overview and Structure",
+            "content": "Operating System - Definition, Evolution, Functions, Types, System Calls, Structure, Virtual Machines, Distributed Systems, Clustered Systems, Computing Environments.",
+            "source_url": "https://example.com/os-intro"
         }
     ]
     
