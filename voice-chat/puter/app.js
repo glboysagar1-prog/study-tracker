@@ -12,7 +12,7 @@ app.use(express.json({ limit: "50mb" }));
 const BYTEZ_KEY = process.env.BYTEZ_API_KEY;
 const DG_KEY = process.env.DEEPGRAM_API_KEY;
 const GROQ_KEY = process.env.GROQ_API_KEY;
-const GATEWAY_PLAYBACK = process.env.GATEWAY_PLAYBACK || "http://localhost:4001/playback";
+const GATEWAY_PLAYBACK = process.env.GATEWAY_PLAYBACK || "http://localhost:4000/playback";
 
 // Initialize Bytez (fallback)
 let bytez;

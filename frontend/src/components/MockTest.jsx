@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import VoiceRecorder from './VoiceRecorder';
 
 const MockTest = () => {
   const { testId } = useParams();
@@ -236,9 +237,18 @@ const MockTest = () => {
 
           {currentQuestion.marks > 1 ? (
             <div className="ml-12">
+              <div className="flex gap-2 mb-2">
+                <VoiceRecorder
+                  onTranscript={(text) => {
+                    const current = selectedAnswers[currentQuestion.id] || '';
+                    handleAnswerSelect(currentQuestion.id, current + (current ? ' ' : '') + text);
+                  }}
+                />
+                <span className="text-gray-500 text-sm self-center">🎤 Speak your answer instead of typing</span>
+              </div>
               <textarea
                 className="w-full h-64 p-4 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
-                placeholder="Write your detailed answer here..."
+                placeholder="Write your detailed answer here or use voice recording..."
                 value={selectedAnswers[currentQuestion.id] || ''}
                 onChange={(e) => handleAnswerSelect(currentQuestion.id, e.target.value)}
               />

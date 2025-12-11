@@ -25,7 +25,17 @@ const RealTimeVoice = () => {
             }
             const ctx = audioContextRef.current;
 
-            const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+            // CRITICAL FIX: Resume AudioContext if suspended (required after page refresh)
+            // Modern browsers suspend AudioContext until user interaction
+            if (ctx.state === 'suspended') {
+                console.log("AudioContext suspended, resuming...");
+                await ctx.resume();
+                console.log("AudioContext resumed successfully");
+            }
+
+            // Clone the arrayBuffer since decodeAudioData detaches the original
+            const arrayBufferCopy = arrayBuffer.slice(0);
+            const audioBuffer = await ctx.decodeAudioData(arrayBufferCopy);
             const source = ctx.createBufferSource();
             source.buffer = audioBuffer;
             source.connect(ctx.destination);
@@ -33,7 +43,7 @@ const RealTimeVoice = () => {
             source.onended = () => { setStatus("Listening..."); };
         } catch (e) {
             console.error("Audio playback error", e);
-            setError("Playback failed");
+            setError("Playback failed: " + e.message);
         }
     };
 
@@ -42,6 +52,17 @@ const RealTimeVoice = () => {
         setStatus("Connecting...");
 
         try {
+            // CRITICAL FIX: Initialize and resume AudioContext on user gesture (button click)
+            // This ensures audio playback will work after the connection is established
+            if (!audioContextRef.current) {
+                audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioContextRef.current.state === 'suspended') {
+                console.log("Pre-resuming AudioContext on user gesture...");
+                await audioContextRef.current.resume();
+                console.log("AudioContext pre-resumed successfully");
+            }
+
             const ws = new WebSocket(GATEWAY_URL);
             wsRef.current = ws;
             ws.binaryType = "arraybuffer";

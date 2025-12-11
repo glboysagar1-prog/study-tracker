@@ -10,8 +10,15 @@ const PORT = process.env.PORT || 4000;
 
 const wss = new WebSocketServer({ noServer: true });
 
+// Track all connected clients for audio broadcast
+const clients = new Set();
+
 wss.on("connection", (ws, req) => {
     console.log("Client connected");
+
+    // CRITICAL FIX: Add client to broadcast set immediately when connected
+    clients.add(ws);
+    console.log(`Client added to broadcast set. Total clients: ${clients.size}`);
 
     // Open Deepgram streaming connection per client
     // Using 'nova-2' model for better speed/accuracy if available, or 'general'
@@ -86,6 +93,9 @@ wss.on("connection", (ws, req) => {
 
     ws.on("close", () => {
         console.log("Client disconnected");
+        // CRITICAL FIX: Remove client from broadcast set on disconnect
+        clients.delete(ws);
+        console.log(`Client removed from broadcast set. Total clients: ${clients.size}`);
         if (dgWs.readyState === dgWs.OPEN) {
             dgWs.close();
         }
@@ -97,12 +107,7 @@ import express from "express";
 const app = express();
 app.use(express.json({ limit: "50mb" }));
 
-// naive in-memory list of ws clients (for demo)
-const clients = new Set();
-wss.on("connection", (ws) => {
-    clients.add(ws);
-    ws.on("close", () => clients.delete(ws));
-});
+// NOTE: 'clients' Set is already declared at the top of the file and managed in the main connection handler
 
 app.post("/playback", (req, res) => {
     // expecting { audio_base64: "...", conversation_id: "local-1" }
