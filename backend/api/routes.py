@@ -641,7 +641,7 @@ def get_update_by_id(update_id):
 
 @api_bp.route('/study-materials/<int:subject_id>')
 def get_study_materials(subject_id):
-    """Get study materials for a subject - Returns only AI-generated PDFs"""
+    """Get study materials for a subject - Returns only high-quality, verified materials"""
     try:
         # First get subject_code from subject_id
         subject_response = supabase.table("subjects").select("subject_code").eq("id", subject_id).execute()
@@ -651,10 +651,10 @@ def get_study_materials(subject_id):
         
         subject_code = subject_response.data[0]['subject_code']
         
-        # Fetch only AI-generated notes (source_name = "AI-Generated (GTU Exam Prep)")
+        # Fetch high-quality, verified notes (multiple trusted sources)
         response = supabase.table("notes").select("*")\
             .eq("subject_code", subject_code)\
-            .eq("source_name", "AI-Generated (GTU Exam Prep)")\
+            .or_("source_name.eq.AI-Generated (GTU Exam Prep),source_name.eq.GTUStudy - Verified,source_name.eq.GTUMaterial - Curated")\
             .order("unit")\
             .execute()
         

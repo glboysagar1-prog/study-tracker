@@ -9,6 +9,7 @@ const Syllabus = () => {
     const [subjectName, setSubjectName] = useState('');
     const [syllabus, setSyllabus] = useState([]);
     const [importantQuestions, setImportantQuestions] = useState([]);
+    const [studyMaterials, setStudyMaterials] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [activeTab, setActiveTab] = useState('syllabus');
@@ -47,6 +48,25 @@ const Syllabus = () => {
 
         fetchData();
     }, [subjectId]);
+
+    // Fetch study materials when the materials tab is activated
+    useEffect(() => {
+        const fetchStudyMaterials = async () => {
+            if (activeTab === 'materials' && studyMaterials.length === 0) {
+                try {
+                    const response = await fetch(`${API_BASE_URL}/study-materials/${subjectId}`);
+                    const data = await response.json();
+                    if (data.materials) {
+                        setStudyMaterials(data.materials);
+                    }
+                } catch (err) {
+                    console.error('Error fetching study materials:', err);
+                }
+            }
+        };
+
+        fetchStudyMaterials();
+    }, [activeTab, subjectId, studyMaterials.length]);
 
     const handleSummarize = async (unitNumber) => {
         setSummaryModal({ show: true, content: '', loading: true, unit: unitNumber });
@@ -244,8 +264,48 @@ const Syllabus = () => {
                         )}
                     </div>
                 ) : (
-                    <div className="bg-white p-6 rounded-lg shadow-md text-center text-gray-500">
-                        Study material tab content coming soon...
+                    <div className="space-y-6">
+                        {studyMaterials.length === 0 ? (
+                            <div className="bg-white p-6 rounded-lg shadow-md text-center text-gray-500">
+                                No study materials found for this subject yet.
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {studyMaterials.map((material) => (
+                                    <div key={material.id} className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300">
+                                        <div className="p-5">
+                                            <div className="flex items-start mb-3">
+                                                <div className="text-2xl mr-3">📝</div>
+                                                <div>
+                                                    <h3 className="font-semibold text-gray-800 line-clamp-2">{material.title}</h3>
+                                                    {material.description && (
+                                                        <p className="text-sm text-gray-600 mt-1 line-clamp-2">{material.description}</p>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            
+                                            <div className="flex justify-between items-center mt-4">
+                                                <div className="text-xs text-gray-500">
+                                                    {material.unit && `Unit ${material.unit}`}
+                                                </div>
+                                                <div className="flex gap-2">
+                                                    {material.content && (
+                                                        <a 
+                                                            href={material.content} 
+                                                            target="_blank" 
+                                                            rel="noopener noreferrer"
+                                                            className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm transition-colors"
+                                                        >
+                                                            View PDF
+                                                        </a>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 )}
             </div>
