@@ -753,9 +753,10 @@ def get_advanced_study_materials(subject_code):
                 query = query.eq("unit", unit)
             response = query.order("created_at", desc=True).execute()
             if response.data:
-                # Add type='notes' to each item for frontend consistency
+                # Add material_type='notes' to each item for frontend consistency
                 for item in response.data:
-                    item['type'] = 'notes'
+                    item['material_type'] = 'notes'
+                    item['type'] = 'notes' # Keep for backward compat if needed
                 materials.extend(response.data)
                 
         # If type is book/ppt/video or not specified, fetch from reference_materials
@@ -768,6 +769,7 @@ def get_advanced_study_materials(subject_code):
                 # Map reference fields to match expected frontend structure if needed
                 for item in response.data:
                     item['file_url'] = item.get('url') # Map url to file_url for consistency
+                    item['material_type'] = item.get('material_type')
                     item['type'] = item.get('material_type')
                 materials.extend(response.data)
             

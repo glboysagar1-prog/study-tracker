@@ -93,36 +93,66 @@ def fetch_page(url: str) -> str | None:
         return None
 
 
-def extract_pdf_urls(html: str) -> list:
-    """Extract all PDF URLs from HTML content"""
-    pdf_urls = []
+def extract_links_with_metadata(html: str) -> list:
+    """Extract PDF and PPT URLs with metadata (text, type) from HTML"""
+    links = []
     
-    # Match various PDF URL patterns
-    patterns = [
-        # AWS S3 GTU syllabus URLs
-        r'https://s3-ap-southeast-1\.amazonaws\.com/gtusitecirculars/Syallbus/(\d{7})\.pdf',
-        # Direct PDF links 
-        r'https?://[^\s"<>]+\.pdf',
-        # Google Drive links
-        r'https://drive\.google\.com/[^\s"<>]+',
-    ]
+    # Use simple regex for efficiency, but BeautifulSoup would be better for text extraction.
+    # Let's try to capture the <a> tag context if possible, or just URL patterns.
+    # Since we don't have BS4 in this file yet (it imported re), let's stick to regex 
+    # but try to capture the link text if it's an <a> tag.
     
-    for pattern in patterns:
-        matches = re.findall(pattern, html)
-        if pattern == patterns[0]:  # S3 URLs
-            for code in matches:
-                full_url = f"https://s3-ap-southeast-1.amazonaws.com/gtusitecirculars/Syallbus/{code}.pdf"
-                if full_url not in pdf_urls:
-                    pdf_urls.append((full_url, code))
-        else:
-            for url in matches:
-                if url not in [u[0] for u in pdf_urls] and '.pdf' in url.lower():
-                    # Extract subject code from URL if possible
-                    code_match = re.search(r'(\d{7})', url)
-                    code = code_match.group(1) if code_match else None
-                    pdf_urls.append((url, code))
+    # Pattern to match <a href="...">...</a>
+    # This is fragile but works for simple pages.
+    link_pattern = r'<a[^>]+href=["\']([^"\']+)["\'][^>]*>(.*?)</a>'
     
-    return pdf_urls
+    matches = re.findall(link_pattern, html, re.IGNORECASE | re.DOTALL)
+    
+    for url, text in matches:
+        # Clean text
+        text = re.sub(r'<[^>]+>', '', text).strip()
+        
+        # Check extensions
+        lower_url = url.lower()
+        file_type = None
+        
+        if '.pdf' in lower_url:
+            file_type = 'pdf'
+        elif '.ppt' in lower_url or '.pptx' in lower_url:
+            file_type = 'ppt'
+        elif 'drive.google.com' in lower_url:
+            # Assume it's a material link
+            file_type = 'drive'
+        
+        if file_type:
+            # Extract subject code
+            code_match = re.search(r'(\d{7})', url) or re.search(r'(\d{7})', text)
+            code = code_match.group(1) if code_match else None
+            
+            # Identify if it's a solution
+            is_solution = 'solution' in lower_url or 'sol' in lower_url or 'answer' in lower_url or 'solution' in text.lower()
+            
+            links.append({
+                'url': url,
+                'text': text,
+                'code': code,
+                'type': file_type,
+                'is_solution': is_solution
+            })
+            
+    # Also catch bare URLs that might not be in <a> tags (less common for clickable downloads but good backup)
+    # Keeping the original pattern logic as a fallback could be useful, but let's trust the link extractor for now
+    # to avoid duplicates and getting random non-clickable URLs.
+    
+    # Filter duplicates based on URL
+    unique_links = []
+    seen_urls = set()
+    for link in links:
+        if link['url'] not in seen_urls:
+            seen_urls.add(link['url'])
+            unique_links.append(link)
+            
+    return unique_links
 
 
 def extract_year(text: str) -> str | None:
@@ -193,39 +223,72 @@ def insert_syllabus_pdf(pdf_url: str, subject_code: str, branch: str, source_url
         return False
 
 
-def insert_old_paper(pdf_url: str, subject_code: str, branch: str, semester: int, source_url: str) -> bool:
-    """Insert old paper into previous_papers table"""
+def insert_old_paper(pdf_url: str, subject_code: str, branch: str, semester: int, source_url: str, is_solution: bool=False) -> bool:
+    """Insert old paper or solution into previous_papers table"""
     try:
-        # Check if paper already exists
-        existing = supabase.table("previous_papers").select("id").eq("paper_pdf_url", pdf_url).execute()
-        if existing.data:
-            logger.debug(f"Skipping duplicate paper: {pdf_url}")
-            return False
-        
-        # Try to find subject_id from subjects table
+        # Check if subject exists
         subject_id = None
         if subject_code:
             sub_result = supabase.table("subjects").select("id").eq("subject_code", subject_code).execute()
             if sub_result.data:
                 subject_id = sub_result.data[0]['id']
         
-        # Extract year from URL
+        # Extract year/season from URL or context
         year = extract_year(pdf_url) or "Unknown"
         
-        data = {
-            "subject_id": subject_id,
-            "year": year,
-            "exam_type": "Regular",
-            "paper_pdf_url": pdf_url,
-            "solution_pdf_url": None,
-        }
+        # Check for existing record for this subject/year
+        # This is a heuristic matching
+        existing_query = supabase.table("previous_papers").select("id, paper_pdf_url, solution_pdf_url").eq("year", year)
+        if subject_id:
+            existing_query = existing_query.eq("subject_id", subject_id)
+            
+        existing = existing_query.execute()
         
-        supabase.table("previous_papers").insert(data).execute()
-        logger.info(f"✓ Inserted paper: {subject_code or 'Unknown'} - {year}")
-        return True
+        if existing.data and len(existing.data) > 0:
+            # Update existing record
+            record = existing.data[0]
+            record_id = record['id']
+            
+            update_data = {}
+            if is_solution:
+                if not record['solution_pdf_url']:
+                    update_data['solution_pdf_url'] = pdf_url
+                    logger.info(f"  ✓ Updated solution for: {subject_code} - {year}")
+            else:
+                if not record['paper_pdf_url']:
+                    update_data['paper_pdf_url'] = pdf_url
+                    logger.info(f"  ✓ Updated paper for: {subject_code} - {year}")
+            
+            if update_data:
+                supabase.table("previous_papers").update(update_data).eq("id", record_id).execute()
+                return True
+            else:
+                return False # Already has this link
+                
+        else:
+            # Create new record
+            data = {
+                "subject_id": subject_id,
+                "year": year,
+                "exam_type": "Regular",
+                "paper_pdf_url": None if is_solution else pdf_url, # If solution only, explicit paper might be missing
+                "solution_pdf_url": pdf_url if is_solution else None,
+            }
+            
+            # If schema requires paper_pdf_url, we might need to put a placeholder or checking schema.
+            # Assuming nullable for now based on logic.
+            if is_solution:
+                 # If we only have solution, maybe we shouldn't insert? 
+                 # Often solutions come with papers.
+                 # But let's insert it if allows.
+                 pass
+
+            supabase.table("previous_papers").insert(data).execute()
+            logger.info(f"✓ Inserted {'solution' if is_solution else 'paper'}: {subject_code or 'Unknown'} - {year}")
+            return True
         
     except Exception as e:
-        logger.error(f"Error inserting paper: {e}")
+        logger.error(f"Error inserting paper/solution: {e}")
         return False
 
 
@@ -273,12 +336,14 @@ def scrape_syllabus():
         if not html:
             continue
         
-        pdf_urls = extract_pdf_urls(html)
-        logger.info(f"Found {len(pdf_urls)} PDFs for {branch}")
+        links = extract_links_with_metadata(html)
+        logger.info(f"Found {len(links)} links for {branch}")
         
-        for pdf_url, subject_code in pdf_urls:
-            if insert_syllabus_pdf(pdf_url, subject_code, branch, url):
-                total_inserted += 1
+        for link in links:
+            if link['type'] == 'pdf' or link['type'] == 'drive':
+                # Syllabus is usually just the PDF
+                if insert_syllabus_pdf(link['url'], link['code'], branch, url):
+                    total_inserted += 1
     
     logger.info(f"Total syllabus PDFs inserted: {total_inserted}")
     return total_inserted
@@ -297,14 +362,21 @@ def scrape_old_papers():
         if not html:
             continue
         
-        pdf_urls = extract_pdf_urls(html)
-        logger.info(f"Found {len(pdf_urls)} papers for {branch} Sem {semester}")
+        links = extract_links_with_metadata(html)
+        logger.info(f"Found {len(links)} links for {branch} Sem {semester}")
         
-        for pdf_url, subject_code in pdf_urls:
-            if insert_old_paper(pdf_url, subject_code, branch, semester, url):
-                total_inserted += 1
+        # Group by subject/year to pair papers and solutions?
+        # For now, simplistic insertion: check if it's a solution and update or insert generic.
+        # But `insert_old_paper` needs to be updated to handle this distinction.
+        # Let's update `insert_old_paper` signature first in a separate tool call if needed, 
+        # or just pass the info.
+        
+        for link in links:
+            if link['type'] == 'pdf':
+                if insert_old_paper(link['url'], link['code'], branch, semester, url, is_solution=link['is_solution']):
+                    total_inserted += 1
     
-    logger.info(f"Total old papers inserted: {total_inserted}")
+    logger.info(f"Total old papers/solutions processed: {total_inserted}")
     return total_inserted
 
 
@@ -321,13 +393,18 @@ def scrape_study_materials():
         if not html:
             continue
         
-        pdf_urls = extract_pdf_urls(html)
-        logger.info(f"Found {len(pdf_urls)} materials for {branch} Sem {semester}")
+        links = extract_links_with_metadata(html)
+        logger.info(f"Found {len(links)} materials for {branch} Sem {semester}")
         
-        for pdf_url, subject_code in pdf_urls:
-            title = f"Study Material - Sem {semester}"
-            if insert_study_material(pdf_url, title, subject_code, branch, semester, url):
-                total_inserted += 1
+        for link in links:
+            # Handle PDF, PPT, and Drive links
+            if link['type'] in ['pdf', 'ppt', 'drive']:
+                # Differentiate title based on type
+                type_label = "Presentation" if link['type'] == 'ppt' else "Material"
+                title = f"{link['text']} ({type_label})" if link['text'] else f"Study {type_label} - Sem {semester}"
+                
+                if insert_study_material(link['url'], title, link['code'], branch, semester, url):
+                    total_inserted += 1
     
     logger.info(f"Total study materials inserted: {total_inserted}")
     return total_inserted

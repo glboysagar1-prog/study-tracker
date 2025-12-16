@@ -6,6 +6,7 @@ import LabPrograms from './LabPrograms';
 import ImportantQuestionsList from './ImportantQuestionsList';
 
 import SyllabusViewer from './SyllabusViewer';
+import PreviousPapers from './PreviousPapers';
 
 import { API_BASE_URL } from '../config/api';
 
@@ -97,7 +98,7 @@ const SubjectLibrary = () => {
         const fetchMaterials = async () => {
             if (!subject || !subject.subject_code) return;
 
-            if (['book', 'ppt'].includes(activeTab)) {
+            if (['notes', 'book', 'ppt'].includes(activeTab)) {
                 try {
                     const response = await fetch(`${API_BASE_URL}/study-materials/advanced/${subject.subject_code}?type=${activeTab}`);
                     const data = await response.json();
@@ -173,7 +174,9 @@ const SubjectLibrary = () => {
     if (!subject) return <div className="min-h-screen flex items-center justify-center">Subject not found</div>;
 
     const tabs = [
-        { id: 'syllabus', label: '📑 Detailed Syllabus' },
+        { id: 'syllabus', label: '📑 Syllabus' },
+        { id: 'notes', label: '📝 Notes' },
+        { id: 'papers', label: '📄 Papers' },
         { id: 'book', label: '📚 Books' },
         { id: 'video', label: '🎥 Videos' },
         { id: 'lab', label: '💻 Labs' },
@@ -218,7 +221,7 @@ const SubjectLibrary = () => {
             <div className="container mx-auto px-4 py-8">
                 {activeTab === 'syllabus' && <SyllabusViewer subjectCode={subject.subject_code} />}
 
-                {['book', 'ppt'].includes(activeTab) && (
+                {['notes', 'book', 'ppt'].includes(activeTab) && (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {materials.length > 0 ? (
                             materials.map(m => (
@@ -240,6 +243,8 @@ const SubjectLibrary = () => {
                 {activeTab === 'video' && <VideoPlaylist subjectCode={subject.subject_code} />}
 
                 {activeTab === 'lab' && <LabPrograms subjectCode={subject.subject_code} />}
+
+                {activeTab === 'papers' && <PreviousPapers subjectCode={subject.subject_code} />}
 
                 {activeTab === 'important' && <ImportantQuestionsList subjectCode={subject.subject_code} />}
             </div>
