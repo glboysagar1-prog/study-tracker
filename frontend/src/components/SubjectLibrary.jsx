@@ -24,33 +24,33 @@ const SubjectLibrary = () => {
             try {
                 setLoading(true);
                 setError(null);
-                
+
                 // Validate subjectId
                 console.log("Subject ID from useParams:", subjectId);
                 console.log("Type of subjectId:", typeof subjectId);
-                
+
                 if (!subjectId) {
                     setError("No subject ID provided");
                     setLoading(false);
                     return;
                 }
-                
+
                 // Check if subjectId is a valid number
                 const numericSubjectId = parseInt(subjectId, 10);
                 console.log("Parsed numericSubjectId:", numericSubjectId);
                 console.log("Is NaN:", isNaN(numericSubjectId));
-                
+
                 if (isNaN(numericSubjectId)) {
                     setError(`Invalid subject ID: ${subjectId}`);
                     setLoading(false);
                     return;
                 }
-                
+
                 console.log(`Fetching subject with ID: ${numericSubjectId}`);
-                
+
                 // Fetch specific subject by ID instead of fetching all and filtering
                 const response = await fetch(`${API_BASE_URL}/subjects/${numericSubjectId}`);
-                
+
                 // Check if response is OK
                 console.log("Response status:", response.status);
                 if (!response.ok) {
@@ -64,10 +64,10 @@ const SubjectLibrary = () => {
                     setLoading(false);
                     return;
                 }
-                
+
                 const data = await response.json();
                 console.log("Subject data received:", data);
-                
+
                 if (data.subject) {
                     setSubject(data.subject);
                 } else if (data.error) {
@@ -82,7 +82,7 @@ const SubjectLibrary = () => {
                 setLoading(false);
             }
         };
-        
+
         console.log("useEffect triggered with subjectId:", subjectId);
         if (subjectId) {
             fetchSubject();
@@ -97,7 +97,7 @@ const SubjectLibrary = () => {
         const fetchMaterials = async () => {
             if (!subject || !subject.subject_code) return;
 
-            if (['notes', 'book', 'ppt'].includes(activeTab)) {
+            if (['book', 'ppt'].includes(activeTab)) {
                 try {
                     const response = await fetch(`${API_BASE_URL}/study-materials/advanced/${subject.subject_code}?type=${activeTab}`);
                     const data = await response.json();
@@ -137,7 +137,7 @@ const SubjectLibrary = () => {
     };
 
     if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
-    
+
     if (error) {
         return (
             <div className="min-h-screen flex items-center justify-center">
@@ -152,13 +152,13 @@ const SubjectLibrary = () => {
                     <p className="text-gray-500 text-sm mb-4">Subject ID: {subjectId}</p>
                     <p className="text-gray-500 text-sm">API Base URL: {API_BASE_URL}</p>
                     <div className="mt-6 flex gap-4">
-                        <button 
+                        <button
                             onClick={() => navigate('/subjects')}
                             className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
                         >
                             ← Back to Subjects
                         </button>
-                        <button 
+                        <button
                             onClick={() => window.location.reload()}
                             className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600"
                         >
@@ -169,12 +169,11 @@ const SubjectLibrary = () => {
             </div>
         );
     }
-    
+
     if (!subject) return <div className="min-h-screen flex items-center justify-center">Subject not found</div>;
 
     const tabs = [
         { id: 'syllabus', label: '📑 Detailed Syllabus' },
-        { id: 'notes', label: '📝 Notes' },
         { id: 'book', label: '📚 Books' },
         { id: 'video', label: '🎥 Videos' },
         { id: 'lab', label: '💻 Labs' },
@@ -219,7 +218,7 @@ const SubjectLibrary = () => {
             <div className="container mx-auto px-4 py-8">
                 {activeTab === 'syllabus' && <SyllabusViewer subjectCode={subject.subject_code} />}
 
-                {['notes', 'book', 'ppt'].includes(activeTab) && (
+                {['book', 'ppt'].includes(activeTab) && (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {materials.length > 0 ? (
                             materials.map(m => (

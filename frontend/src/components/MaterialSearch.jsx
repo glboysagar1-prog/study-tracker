@@ -82,7 +82,6 @@ const MaterialSearch = () => {
                     className="p-2 border border-gray-300 rounded-md"
                 >
                     <option value="">All Types</option>
-                    <option value="notes">Notes</option>
                     <option value="video">Videos</option>
                     <option value="book">Books</option>
                     <option value="lab">Lab Files</option>

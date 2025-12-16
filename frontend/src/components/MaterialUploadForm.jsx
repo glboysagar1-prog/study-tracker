@@ -5,7 +5,7 @@ const MaterialUploadForm = () => {
     const [loading, setLoading] = useState(false);
     const [formData, setFormData] = useState({
         subject_code: '',
-        material_type: 'notes',
+        material_type: 'book',
         title: '',
         description: '',
         unit: '',
@@ -103,7 +103,6 @@ const MaterialUploadForm = () => {
                         onChange={handleChange}
                         className="w-full p-2 border border-gray-300 rounded-md"
                     >
-                        <option value="notes">📝 Notes</option>
                         <option value="book">📚 Reference Book</option>
                         <option value="video">🎥 Video Link</option>
                         <option value="lab">💻 Lab File</option>
