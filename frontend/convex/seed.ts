@@ -370,6 +370,69 @@ export const seedScraped = mutation({
 });
 import sem4Data from "./gtu_semester_4_materials.json";
 
+const SUBJECT_NAMES: Record<string, string> = {
+    "3110001": "Chemistry",
+    "3110002": "English",
+    "3110003": "Programming for Problem Solving",
+    "3110004": "Basic Civil Engineering",
+    "3110005": "Basic Electrical Engineering",
+    "3110006": "Basic Mechanical Engineering",
+    "3110007": "Environmental Science",
+    "3110011": "Physics-I",
+    "3110012": "Workshop",
+    "3110013": "Engineering Graphics and Design",
+    "3110014": "Mathematics - I",
+    "3110015": "Mathematics - II",
+    "3110016": "Basics of Electronics",
+    "3110018": "Physics-II",
+    "3130004": "Effective Technical Communication",
+    "3130006": "Probability and Statistics",
+    "3130007": "Indian Constitution",
+    "3130008": "Design Engineering - 1 A",
+    "3130701": "Discrete Mathematics",
+    "3130702": "Data Structures",
+    "3130703": "Database Management Systems",
+    "3130704": "Digital Fundamentals",
+    "3140702": "Operating System",
+    "3140705": "Object Oriented Programming - I (Java)",
+    "3140707": "Computer Organization & Architecture",
+    "3140708": "Discrete Mathematics",
+    "3140709": "Principles of Economics and Management",
+    "3150004": "Contributor Personality Development Program",
+    "3150005": "Integrated Personality Development Course",
+    "3150703": "Analysis and Design of Algorithms",
+    "3150709": "Professional Ethics",
+    "3150710": "Computer Networks",
+    "3150711": "Software Engineering",
+    "3150712": "Computer Graphics",
+    "3150713": "Python for Data Science",
+    "3150714": "Cyber Security",
+    "3160002": "Contributor Personality Development Program",
+    "3160003": "Integrated Personality Development Course",
+    "3160704": "Theory of Computation",
+    "3160707": "Advanced Java Programming",
+    "3160712": "Microprocessor and Interfacing",
+    "3160713": "Web Programming",
+    "3160714": "Data Mining",
+    "3160715": "System Software",
+    "3160716": "IOT and Applications",
+    "3160717": "Data Visualization",
+    "3170001": "Summer Internship",
+    "3170701": "Compiler Design",
+    "3170710": "Mobile Computing and Wireless Communication",
+    "3170716": "Artificial Intelligence",
+    "3170717": "Cloud Computing",
+    "3170718": "Information Retrieval",
+    "3170719": "Distributed System",
+    "3170720": "Information Security",
+    "3170721": "Parallel and Distributed Computing",
+    "3170722": "Big Data Analytics",
+    "3170723": "Natural Language Processing",
+    "3170724": "Machine Learning",
+    "3170725": "Digital Forensics",
+    "3170726": "Mobile Application Development"
+};
+
 export const seedSem4 = mutation({
     handler: async (ctx) => {
         let subjectsAdded = 0;
@@ -387,13 +450,8 @@ export const seedSem4 = mutation({
             let subjectId = existingSubject?._id;
 
             if (!subjectId) {
-                // If subject doesn't exist, we can create a basic one based on GTU codes
-                let subjectName = "Unknown Subject";
-                if (item.subjectCode === "3140702") subjectName = "Operating System";
-                if (item.subjectCode === "3140705") subjectName = "Object Oriented Programming - I (Java)";
-                if (item.subjectCode === "3140707") subjectName = "Computer Organization & Architecture";
-                if (item.subjectCode === "3140708") subjectName = "Discrete Mathematics";
-                if (item.subjectCode === "3140709") subjectName = "Principles of Economics and Management";
+                // Use mapping or default to "Unknown Subject"
+                const subjectName = SUBJECT_NAMES[item.subjectCode] || "Unknown Subject";
 
                 subjectId = await ctx.db.insert("subjects", {
                     course: "BE",
@@ -460,5 +518,25 @@ export const seedSem4 = mutation({
         }
 
         return `✅ Seeded Semester 4 Data: ${subjectsAdded} new subjects, ${materialsAdded} materials (notes, syllabus, videos), ${papersAdded} past papers.`;
+    }
+});
+
+export const fixUnknownSubjects = mutation({
+    handler: async (ctx) => {
+        const unknownSubjects = await ctx.db
+            .query("subjects")
+            .filter((q) => q.eq(q.field("subjectName"), "Unknown Subject"))
+            .collect();
+
+        let updated = 0;
+        for (const subject of unknownSubjects) {
+            const realName = SUBJECT_NAMES[subject.subjectCode];
+            if (realName) {
+                await ctx.db.patch(subject._id, { subjectName: realName });
+                updated++;
+            }
+        }
+
+        return `🛠️ Data Cleanup: Updated ${updated} subjects from "Unknown Subject" to correct GTU names.`;
     }
 });
