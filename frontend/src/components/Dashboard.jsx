@@ -1,183 +1,152 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useQuery } from 'convex/react';
+import { api } from '../../convex/_generated/api';
 import { useAuth } from '../context/AuthContext';
-import { API_BASE_URL } from '../config/api';
+import { HoverBorderGradient } from './ui/HoverBorderGradient';
+import { BorderBeam } from './ui/BorderBeam';
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const Dashboard = () => {
   const { user, profile } = useAuth();
-  const [subjects, setSubjects] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({
     course: '',
     branch: '',
     semester: ''
   });
-  const [metadata, setMetadata] = useState({
-    courses: [],
-    branches: [],
-    semesters: []
-  });
-  const [stats, setStats] = useState({
-    topicsCompleted: 42,
-    totalXP: 2850,
-    testsCompleted: 12,
-    streak: 7
+  const [stats] = useState({
+    topicsCompleted: 0,
+    totalXP: 0,
+    testsCompleted: 0,
+    streak: 0
   });
 
-  useEffect(() => {
-    fetchMetadata();
-  }, []);
+  const metadata = useQuery(api.subjects.getMetadata) ?? { courses: [], branches: [], semesters: [] };
+  const subjects = useQuery(api.subjects.list, {
+    course: filters.course || undefined,
+    branch: filters.branch || undefined,
+    semester: filters.semester || undefined,
+  });
 
-  useEffect(() => {
-    fetchSubjects();
-  }, [filters]);
-
-  const fetchMetadata = async () => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/subjects/metadata`);
-      const data = await response.json();
-      setMetadata(data);
-    } catch (error) {
-      console.error('Error fetching metadata:', error);
-    }
-  };
-
-  const fetchSubjects = async () => {
-    setLoading(true);
-    try {
-      // Build query string
-      const params = new URLSearchParams();
-      if (filters.course) params.append('course', filters.course);
-      if (filters.branch) params.append('branch', filters.branch);
-      if (filters.semester) params.append('semester', filters.semester);
-
-      const response = await fetch(`${API_BASE_URL}/subjects?${params.toString()}`);
-      const data = await response.json();
-
-      if (data.subjects) {
-        setSubjects(data.subjects);
-      }
-
-      setLoading(false);
-    } catch (error) {
-      console.error('Error fetching subjects:', error);
-      setLoading(false);
-    }
-  };
+  const loading = subjects === undefined;
 
   const clearFilters = () => {
-    setFilters({
-      course: '',
-      branch: '',
-      semester: ''
-    });
+    setFilters({ course: '', branch: '', semester: '' });
   };
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-8">
+    <div className="p-8 max-w-7xl mx-auto space-y-12">
       {/* Header */}
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-4xl font-extrabold text-gray-900 dark:text-white tracking-tight">
-            Welcome back, {profile?.username || user?.email?.split('@')[0] || 'Student'}! <span className="animate-wave inline-block">👋</span>
+      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 glass-panel p-8 rounded-3xl relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 to-purple-500/10 pointer-events-none" />
+        <div className="relative z-10">
+          <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-2">
+            Welcome back, <span className="text-gradient">{profile?.username || user?.email?.split('@')[0] || 'Student'}</span>! <span className="animate-wave inline-block origin-bottom-right">👋</span>
           </h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-2 text-lg">
-            {profile ? `${profile.ai_credits} AI credits remaining` : "You've completed 3 topics today. Keep up the great work!"}
+          <p className="text-gray-400 mt-2 text-lg font-medium">
+            {profile ? `${profile.ai_credits} AI credits remaining` : "You've completed 0 topics today. Time to get started!"}
           </p>
         </div>
-        <div className="flex gap-3">
-          <button className="p-3 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-500 hover:text-indigo-600 hover:border-indigo-200 transition-all shadow-sm hover:shadow-md">
+        <div className="flex gap-4 relative z-10 items-center">
+          <Button variant="outline" size="icon" className="h-14 w-14 rounded-2xl bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all shadow-sm">
             <span className="material-icons text-xl">search</span>
-          </button>
-          <button className="p-3 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-500 hover:text-indigo-600 hover:border-indigo-200 transition-all shadow-sm hover:shadow-md">
+          </Button>
+          <Button variant="outline" size="icon" className="h-14 w-14 rounded-2xl bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all shadow-sm">
             <span className="material-icons text-xl">notifications</span>
-          </button>
+          </Button>
           <Link to="/mock-tests/1">
-            <button className="flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-semibold shadow-lg shadow-indigo-200 hover:shadow-indigo-300 transition-all transform hover:-translate-y-0.5">
-              <span className="material-icons text-xl">add</span>
-              <span>Start Test</span>
-            </button>
+            <HoverBorderGradient
+              containerClassName="rounded-2xl"
+              as="button"
+              className="flex items-center gap-2 bg-indigo-600/20 hover:bg-indigo-600/40 text-white px-6 py-3 h-14"
+            >
+              <span className="material-icons text-xl">rocket_launch</span>
+              <span className="font-bold tracking-wide">Start Mock Test</span>
+            </HoverBorderGradient>
           </Link>
         </div>
+        <BorderBeam size={200} duration={8} delay={1} />
       </header>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {/* Stat Card 1 */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-xl transition-all duration-300 group">
-          <div className="flex justify-between items-start mb-4">
-            <div>
-              <div className="text-3xl font-bold text-gray-900 dark:text-white mb-1 group-hover:text-indigo-600 transition-colors">
-                {stats.topicsCompleted}
+        <Card className="glass-panel border-0 rounded-3xl transition-all duration-300 group hover:-translate-y-1 relative overflow-hidden bg-transparent shadow-none">
+          <CardContent className="p-6">
+            <div className="flex justify-between items-start mb-4 relative z-10">
+              <div>
+                <div className="text-3xl font-extrabold text-white mb-1 group-hover:text-indigo-400 transition-colors">{stats.topicsCompleted}</div>
+                <div className="text-sm font-medium text-gray-400">Topics Mastered</div>
               </div>
-              <div className="text-sm font-medium text-gray-500 dark:text-gray-400">Topics Mastered</div>
+              <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 group-hover:scale-110 transition-transform">
+                <span className="material-icons text-2xl">school</span>
+              </div>
             </div>
-            <div className="w-12 h-12 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform">
-              <span className="material-icons text-2xl">school</span>
+            <div className="flex items-center gap-1 text-xs font-semibold text-gray-400 bg-white/5 border border-white/10 px-3 py-1.5 rounded-xl w-fit relative z-10">
+              <span className="material-icons text-sm">trending_flat</span>
+              <span>No topics yet</span>
             </div>
-          </div>
-          <div className="flex items-center gap-1 text-xs font-semibold text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 px-2.5 py-1 rounded-lg w-fit">
-            <span className="material-icons text-sm">trending_up</span>
-            <span>+12% this week</span>
-          </div>
-        </div>
+            <BorderBeam size={100} duration={12} delay={0} />
+          </CardContent>
+        </Card>
 
-        {/* Stat Card 2 */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-xl transition-all duration-300 group">
-          <div className="flex justify-between items-start mb-4">
-            <div>
-              <div className="text-3xl font-bold text-gray-900 dark:text-white mb-1 group-hover:text-amber-500 transition-colors">
-                {stats.totalXP.toLocaleString()}
+        <Card className="glass-panel border-0 rounded-3xl transition-all duration-300 group hover:-translate-y-1 relative overflow-hidden bg-transparent shadow-none">
+          <CardContent className="p-6">
+            <div className="flex justify-between items-start mb-4 relative z-10">
+              <div>
+                <div className="text-3xl font-extrabold text-white mb-1 group-hover:text-amber-400 transition-colors">{stats.totalXP.toLocaleString()}</div>
+                <div className="text-sm font-medium text-gray-400">Total XP Earned</div>
               </div>
-              <div className="text-sm font-medium text-gray-500 dark:text-gray-400">Total XP Earned</div>
+              <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 group-hover:scale-110 transition-transform">
+                <span className="material-icons text-2xl">emoji_events</span>
+              </div>
             </div>
-            <div className="w-12 h-12 rounded-xl bg-amber-50 dark:bg-amber-900/30 flex items-center justify-center text-amber-500 dark:text-amber-400 group-hover:scale-110 transition-transform">
-              <span className="material-icons text-2xl">emoji_events</span>
+            <div className="flex items-center gap-1 text-xs font-semibold text-gray-400 bg-white/5 border border-white/10 px-3 py-1.5 rounded-xl w-fit relative z-10">
+              <span className="material-icons text-sm">trending_flat</span>
+              <span>+0 XP today</span>
             </div>
-          </div>
-          <div className="flex items-center gap-1 text-xs font-semibold text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 px-2.5 py-1 rounded-lg w-fit">
-            <span className="material-icons text-sm">trending_up</span>
-            <span>+350 XP today</span>
-          </div>
-        </div>
+            <BorderBeam size={100} duration={12} delay={2} />
+          </CardContent>
+        </Card>
 
-        {/* Stat Card 3 */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-xl transition-all duration-300 group">
-          <div className="flex justify-between items-start mb-4">
-            <div>
-              <div className="text-3xl font-bold text-gray-900 dark:text-white mb-1 group-hover:text-blue-500 transition-colors">
-                {stats.testsCompleted}<span className="text-lg text-gray-400 font-normal">/15</span>
+        <Card className="glass-panel border-0 rounded-3xl transition-all duration-300 group hover:-translate-y-1 relative overflow-hidden bg-transparent shadow-none">
+          <CardContent className="p-6">
+            <div className="flex justify-between items-start mb-4 relative z-10">
+              <div>
+                <div className="text-3xl font-extrabold text-white mb-1 group-hover:text-blue-400 transition-colors">{stats.testsCompleted}<span className="text-lg text-gray-500 font-normal">/0</span></div>
+                <div className="text-sm font-medium text-gray-400">Tests Completed</div>
               </div>
-              <div className="text-sm font-medium text-gray-500 dark:text-gray-400">Tests Completed</div>
+              <div className="w-12 h-12 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 group-hover:scale-110 transition-transform">
+                <span className="material-icons text-2xl">assignment_turned_in</span>
+              </div>
             </div>
-            <div className="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-blue-500 dark:text-blue-400 group-hover:scale-110 transition-transform">
-              <span className="material-icons text-2xl">assignment_turned_in</span>
+            <div className="flex items-center gap-1 text-xs font-semibold text-gray-400 bg-white/5 border border-white/10 px-3 py-1.5 rounded-xl w-fit relative z-10">
+              <span className="material-icons text-sm">trending_flat</span>
+              <span>Avg: 0%</span>
             </div>
-          </div>
-          <div className="flex items-center gap-1 text-xs font-semibold text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 px-2.5 py-1 rounded-lg w-fit">
-            <span className="material-icons text-sm">trending_up</span>
-            <span>Avg: 85%</span>
-          </div>
-        </div>
+            <BorderBeam size={100} duration={12} delay={4} />
+          </CardContent>
+        </Card>
 
-        {/* Stat Card 4 */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-xl transition-all duration-300 group">
-          <div className="flex justify-between items-start mb-4">
-            <div>
-              <div className="text-3xl font-bold text-gray-900 dark:text-white mb-1 group-hover:text-rose-500 transition-colors">
-                {stats.streak} <span className="text-lg text-gray-400 font-normal">Days</span>
+        <Card className="glass-panel border-0 rounded-3xl transition-all duration-300 group hover:-translate-y-1 relative overflow-hidden bg-transparent shadow-none">
+          <CardContent className="p-6">
+            <div className="flex justify-between items-start mb-4 relative z-10">
+              <div>
+                <div className="text-3xl font-extrabold text-white mb-1 group-hover:text-rose-400 transition-colors">{stats.streak} <span className="text-lg text-gray-500 font-normal">Days</span></div>
+                <div className="text-sm font-medium text-gray-400">Study Streak</div>
               </div>
-              <div className="text-sm font-medium text-gray-500 dark:text-gray-400">Study Streak</div>
+              <div className="w-12 h-12 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400 group-hover:scale-110 transition-transform">
+                <span className="material-icons text-2xl">local_fire_department</span>
+              </div>
             </div>
-            <div className="w-12 h-12 rounded-xl bg-rose-50 dark:bg-rose-900/30 flex items-center justify-center text-rose-500 dark:text-rose-400 group-hover:scale-110 transition-transform">
-              <span className="material-icons text-2xl">local_fire_department</span>
+            <div className="flex items-center gap-1 text-xs font-semibold text-gray-400 bg-white/5 border border-white/10 px-3 py-1.5 rounded-xl w-fit relative z-10">
+              <span className="material-icons text-sm">trending_flat</span>
+              <span>Start your streak!</span>
             </div>
-          </div>
-          <div className="flex items-center gap-1 text-xs font-semibold text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 px-2.5 py-1 rounded-lg w-fit">
-            <span className="material-icons text-sm">trending_up</span>
-            <span>Personal best!</span>
-          </div>
-        </div>
+            <BorderBeam size={100} duration={12} delay={6} />
+          </CardContent>
+        </Card>
       </div>
 
       {/* Continue Learning Section - Full Subjects Browser */}
@@ -187,152 +156,124 @@ const Dashboard = () => {
         </div>
 
         {/* Filters */}
-        <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Course</label>
-              <select
-                value={filters.course}
-                onChange={(e) => setFilters({ ...filters, course: e.target.value })}
-                className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-              >
-                <option value="">All Courses</option>
-                {metadata.courses.map(course => (
-                  <option key={course} value={course}>{course}</option>
-                ))}
-              </select>
-            </div>
+        <Card className="glass-panel border-0 rounded-3xl mb-8 relative z-10 bg-transparent shadow-none">
+          <CardContent className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <div>
+                <label className="block text-sm font-semibold text-gray-300 mb-2 uppercase tracking-wide">Course</label>
+                <Select
+                  value={filters.course || "all"}
+                  onValueChange={(val) => setFilters({ ...filters, course: val === "all" ? "" : val })}
+                >
+                  <SelectTrigger className="w-full p-3.5 border border-white/10 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-black/40 text-white backdrop-blur-xl h-14">
+                    <SelectValue placeholder="All Courses" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#1a1a2e] border-white/10 text-white">
+                    <SelectItem value="all">All Courses</SelectItem>
+                    {metadata.courses.map(course => (
+                      <SelectItem key={course} value={course}>{course}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Branch</label>
-              <select
-                value={filters.branch}
-                onChange={(e) => setFilters({ ...filters, branch: e.target.value })}
-                className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-              >
-                <option value="">All Branches</option>
-                {metadata.branches.map(branch => (
-                  <option key={branch} value={branch}>{branch}</option>
-                ))}
-              </select>
-            </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-300 mb-2 uppercase tracking-wide">Branch</label>
+                <Select
+                  value={filters.branch || "all"}
+                  onValueChange={(val) => setFilters({ ...filters, branch: val === "all" ? "" : val })}
+                >
+                  <SelectTrigger className="w-full p-3.5 border border-white/10 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-black/40 text-white backdrop-blur-xl h-14">
+                    <SelectValue placeholder="All Branches" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#1a1a2e] border-white/10 text-white">
+                    <SelectItem value="all">All Branches</SelectItem>
+                    {metadata.branches.map(branch => (
+                      <SelectItem key={branch} value={branch}>{branch}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Semester</label>
-              <select
-                value={filters.semester}
-                onChange={(e) => setFilters({ ...filters, semester: e.target.value })}
-                className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-              >
-                <option value="">All Semesters</option>
-                {metadata.semesters.map(sem => (
-                  <option key={sem} value={sem}>Semester {sem}</option>
-                ))}
-              </select>
-            </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-300 mb-2 uppercase tracking-wide">Semester</label>
+                <Select
+                  value={filters.semester || "all"}
+                  onValueChange={(val) => setFilters({ ...filters, semester: val === "all" ? "" : val })}
+                >
+                  <SelectTrigger className="w-full p-3.5 border border-white/10 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-black/40 text-white backdrop-blur-xl h-14">
+                    <SelectValue placeholder="All Semesters" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#1a1a2e] border-white/10 text-white">
+                    <SelectItem value="all">All Semesters</SelectItem>
+                    {metadata.semesters.map(sem => (
+                      <SelectItem key={sem} value={sem}>Semester {sem}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-            <div className="flex items-end">
-              <button
-                onClick={clearFilters}
-                className="w-full px-4 py-3 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-xl hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors font-medium"
-              >
-                Clear Filters
-              </button>
+              <div className="flex items-end">
+                <Button
+                  onClick={clearFilters}
+                  variant="outline"
+                  className="w-full h-14 bg-white/5 border-white/10 text-white hover:text-white rounded-2xl hover:bg-white/10 transition-colors font-semibold text-base"
+                >
+                  Reset Filters
+                </Button>
+              </div>
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
         {/* Subjects Table */}
         {loading ? (
           <div className="flex justify-center py-12">
-            <div className="text-xl text-gray-600 dark:text-gray-400">Loading subjects...</div>
+            <div className="text-xl text-indigo-400 font-medium animate-pulse">Loading subjects...</div>
           </div>
         ) : subjects.length === 0 ? (
-          <div className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-sm text-center border border-gray-100 dark:border-gray-700">
-            <p className="text-gray-600 dark:text-gray-400 text-lg mb-4">No subjects found matching your filters.</p>
-            <button
-              onClick={clearFilters}
-              className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-medium"
-            >
-              Clear all filters
-            </button>
-          </div>
+          <Card className="glass-panel border-0 p-12 rounded-3xl text-center shadow-none bg-transparent backdrop-blur-md">
+            <CardContent>
+              <p className="text-gray-300 text-xl font-medium mb-4">No subjects found matching your filters.</p>
+              <Button
+                variant="link"
+                onClick={clearFilters}
+                className="text-indigo-400 hover:text-indigo-300 font-bold p-0 text-lg"
+              >
+                Clear all filters
+              </Button>
+            </CardContent>
+          </Card>
         ) : (
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm overflow-hidden border border-gray-100 dark:border-gray-700">
+          <Card className="glass-panel rounded-3xl overflow-hidden border-0 shadow-2xl relative z-10 bg-transparent">
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                <thead className="bg-gray-50 dark:bg-gray-900">
+              <table className="min-w-full divide-y divide-white/10">
+                <thead className="bg-black/40">
                   <tr>
-                    <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                      Course
-                    </th>
-                    <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                      Branch
-                    </th>
-                    <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                      Subject Code
-                    </th>
-                    <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                      Subject Name
-                    </th>
-                    <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                      Semester
-                    </th>
-                    <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                      Credits
-                    </th>
-                    <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                      Actions
-                    </th>
+                    <th scope="col" className="px-8 py-5 text-left text-xs font-bold text-gray-300 uppercase tracking-widest">Course</th>
+                    <th scope="col" className="px-8 py-5 text-left text-xs font-bold text-gray-300 uppercase tracking-widest">Branch</th>
+                    <th scope="col" className="px-8 py-5 text-left text-xs font-bold text-gray-300 uppercase tracking-widest">Code</th>
+                    <th scope="col" className="px-8 py-5 text-left text-xs font-bold text-gray-300 uppercase tracking-widest">Subject Name</th>
+                    <th scope="col" className="px-8 py-5 text-left text-xs font-bold text-gray-300 uppercase tracking-widest">Sem</th>
+                    <th scope="col" className="px-8 py-5 text-left text-xs font-bold text-gray-300 uppercase tracking-widest">Credits</th>
+                    <th scope="col" className="px-8 py-5 text-left text-xs font-bold text-gray-300 uppercase tracking-widest">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                <tbody className="divide-y divide-white/5 bg-transparent backdrop-blur-sm">
                   {subjects.map((subject) => (
-                    <tr key={subject.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                        {subject.course}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                        {subject.branch}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-mono font-semibold text-gray-900 dark:text-white">
-                        {subject.subject_code}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300 max-w-xs">
-                        {subject.subject_name}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                        {subject.semester}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                        {subject.credits}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <div className="flex space-x-3">
-                          <Link
-                            to={`/syllabus/${subject.id}`}
-                            className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 font-medium"
-                          >
-                            Syllabus
-                          </Link>
-                          <Link
-                            to={`/previous-papers/${subject.id}`}
-                            className="text-green-600 dark:text-green-400 hover:text-green-900 dark:hover:text-green-300 font-medium"
-                          >
-                            Papers
-                          </Link>
-                          <Link
-                            to={`/mock-tests/${subject.id}`}
-                            className="text-purple-600 dark:text-purple-400 hover:text-purple-900 dark:hover:text-purple-300 font-medium"
-                          >
-                            Tests
-                          </Link>
-                          <Link
-                            to={`/important-questions/${subject.id}`}
-                            className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300 font-medium"
-                          >
-                            IMP
-                          </Link>
+                    <tr key={subject._id} className="hover:bg-white/5 transition-colors group">
+                      <td className="px-8 py-5 whitespace-nowrap text-sm font-medium text-gray-400">{subject.course}</td>
+                      <td className="px-8 py-5 whitespace-nowrap text-sm font-medium text-gray-400">{subject.branch}</td>
+                      <td className="px-8 py-5 whitespace-nowrap text-sm font-mono font-bold text-white bg-white/5 group-hover:bg-white/10 rounded-lg mx-2 my-2 inline-block transition-colors">{subject.subjectCode}</td>
+                      <td className="px-8 py-5 text-base font-semibold text-gray-200 max-w-xs">{subject.subjectName}</td>
+                      <td className="px-8 py-5 whitespace-nowrap text-sm font-medium text-gray-400">{subject.semester}</td>
+                      <td className="px-8 py-5 whitespace-nowrap text-sm font-medium text-gray-400">{subject.credits}</td>
+                      <td className="px-8 py-5 whitespace-nowrap text-sm">
+                        <div className="flex space-x-4">
+                          <Link to={`/syllabus/${subject._id}`} className="text-indigo-400 hover:text-indigo-300 font-bold transition-colors hover:scale-105">Syllabus</Link>
+                          <Link to={`/materials/${subject.subjectCode}`} className="text-emerald-400 hover:text-emerald-300 font-bold transition-colors hover:scale-105">Materials</Link>
+                          <Link to={`/mock-tests/${subject._id}`} className="text-fuchsia-400 hover:text-fuchsia-300 font-bold transition-colors hover:scale-105">Tests</Link>
+                          <Link to={`/important-questions/${subject._id}`} className="text-rose-400 hover:text-rose-300 font-bold transition-colors hover:scale-105">IMP</Link>
                         </div>
                       </td>
                     </tr>
@@ -340,44 +281,64 @@ const Dashboard = () => {
                 </tbody>
               </table>
             </div>
-          </div>
+          </Card>
         )}
       </section>
 
       {/* Quick Tools */}
       <section>
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Quick Tools</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Link to="/ai-assistant" className="group bg-white dark:bg-gray-800 p-6 rounded-2xl border-2 border-transparent hover:border-indigo-100 dark:hover:border-indigo-900 hover:bg-indigo-50/50 dark:hover:bg-indigo-900/20 transition-all duration-300 text-center shadow-sm hover:shadow-lg">
-            <div className="text-4xl mb-3 group-hover:scale-110 transition-transform duration-300">🃏</div>
-            <h3 className="font-bold text-gray-900 dark:text-white mb-1">Flashcards</h3>
-            <p className="text-xs text-gray-500">Practice with 120+ cards</p>
+        <h2 className="text-3xl font-extrabold text-white mb-8 tracking-tight">Quick Tools</h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          <Link to="/ai-assistant">
+            <Card className="glass-panel border-0 rounded-3xl hover:border-indigo-500/50 hover:bg-indigo-500/5 transition-all duration-300 text-center relative overflow-hidden group bg-transparent h-full shadow-none">
+              <CardContent className="p-8 flex flex-col items-center justify-center">
+                <div className="text-4xl mb-4 group-hover:scale-110 transition-transform duration-300 relative z-10">🃏</div>
+                <h3 className="font-bold text-white mb-1 relative z-10">Flashcards</h3>
+                <p className="text-sm text-gray-400 relative z-10">Practice with 120+ cards</p>
+              </CardContent>
+            </Card>
           </Link>
 
-          <Link to="/subjects" className="group bg-white dark:bg-gray-800 p-6 rounded-2xl border-2 border-transparent hover:border-emerald-100 dark:hover:border-emerald-900 hover:bg-emerald-50/50 dark:hover:bg-emerald-900/20 transition-all duration-300 text-center shadow-sm hover:shadow-lg">
-            <div className="text-4xl mb-3 group-hover:scale-110 transition-transform duration-300">📝</div>
-            <h3 className="font-bold text-gray-900 dark:text-white mb-1">Mock Tests</h3>
-            <p className="text-xs text-gray-500">GTU pattern tests</p>
+          <Link to="/subjects">
+            <Card className="glass-panel border-0 rounded-3xl hover:border-emerald-500/50 hover:bg-emerald-500/5 transition-all duration-300 text-center relative overflow-hidden group bg-transparent h-full shadow-none">
+              <CardContent className="p-8 flex flex-col items-center justify-center">
+                <div className="text-4xl mb-4 group-hover:scale-110 transition-transform duration-300 relative z-10">📝</div>
+                <h3 className="font-bold text-white mb-1 relative z-10">Mock Tests</h3>
+                <p className="text-sm text-gray-400 relative z-10">GTU pattern tests</p>
+              </CardContent>
+            </Card>
           </Link>
 
-          <Link to="/subjects" className="group bg-white dark:bg-gray-800 p-6 rounded-2xl border-2 border-transparent hover:border-amber-100 dark:hover:border-amber-900 hover:bg-amber-50/50 dark:hover:bg-amber-900/20 transition-all duration-300 text-center shadow-sm hover:shadow-lg">
-            <div className="text-4xl mb-3 group-hover:scale-110 transition-transform duration-300">⭐</div>
-            <h3 className="font-bold text-gray-900 dark:text-white mb-1">Important Qs</h3>
-            <p className="text-xs text-gray-500">200+ curated questions</p>
+          <Link to="/subjects">
+            <Card className="glass-panel border-0 rounded-3xl hover:border-amber-500/50 hover:bg-amber-500/5 transition-all duration-300 text-center relative overflow-hidden group bg-transparent h-full shadow-none">
+              <CardContent className="p-8 flex flex-col items-center justify-center">
+                <div className="text-4xl mb-4 group-hover:scale-110 transition-transform duration-300 relative z-10">⭐</div>
+                <h3 className="font-bold text-white mb-1 relative z-10">Important Qs</h3>
+                <p className="text-sm text-gray-400 relative z-10">200+ curated questions</p>
+              </CardContent>
+            </Card>
           </Link>
 
-          <Link to="/subjects" className="group bg-white dark:bg-gray-800 p-6 rounded-2xl border-2 border-transparent hover:border-rose-100 dark:hover:border-rose-900 hover:bg-rose-50/50 dark:hover:bg-rose-900/20 transition-all duration-300 text-center shadow-sm hover:shadow-lg">
-            <div className="text-4xl mb-3 group-hover:scale-110 transition-transform duration-300">🎥</div>
-            <h3 className="font-bold text-gray-900 dark:text-white mb-1">Video Lessons</h3>
-            <p className="text-xs text-gray-500">50+ hours of content</p>
+          <Link to="/subjects">
+            <Card className="glass-panel border-0 rounded-3xl hover:border-rose-500/50 hover:bg-rose-500/5 transition-all duration-300 text-center relative overflow-hidden group bg-transparent h-full shadow-none">
+              <CardContent className="p-8 flex flex-col items-center justify-center">
+                <div className="text-4xl mb-4 group-hover:scale-110 transition-transform duration-300 relative z-10">🎥</div>
+                <h3 className="font-bold text-white mb-1 relative z-10">Video Lessons</h3>
+                <p className="text-sm text-gray-400 relative z-10">50+ hours of content</p>
+              </CardContent>
+            </Card>
           </Link>
 
-          <Link to="/prepare-exam" className="col-span-2 md:col-span-4 group bg-gradient-to-r from-indigo-600 to-purple-600 p-6 rounded-2xl text-white shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-between">
-            <div className="text-left">
-              <h3 className="text-xl font-bold mb-1">🚀 Prepare Exam with AI</h3>
-              <p className="text-indigo-100 text-sm">Get predicted papers, AI answers, and smart study plans</p>
+          <Link to="/prepare-exam" className="col-span-2 md:col-span-4 group relative overflow-hidden rounded-3xl block">
+            <div className="absolute inset-0 bg-gradient-to-r from-indigo-600 via-fuchsia-600 to-rose-600 opacity-90 transition-opacity group-hover:opacity-100" />
+            <div className="relative p-8 flex items-center justify-between z-10">
+              <div className="text-left">
+                <h3 className="text-2xl font-extrabold text-white mb-1 tracking-tight">🚀 Prepare Exam with AI</h3>
+                <p className="text-indigo-100 text-base font-medium">Generate predicted papers, AI answers, and personalized smart study plans.</p>
+              </div>
+              <div className="text-5xl group-hover:rotate-12 group-hover:scale-110 transition-all duration-500 drop-shadow-2xl">✨</div>
             </div>
-            <div className="text-4xl group-hover:scale-110 transition-transform duration-300">✨</div>
+            <BorderBeam size={400} duration={10} colorFrom="#fff" colorTo="transparent" />
           </Link>
         </div>
       </section>

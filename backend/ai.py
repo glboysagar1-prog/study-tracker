@@ -139,5 +139,47 @@ class AIProcessor:
             logger.error(f"Error generating AI response: {str(e)}", exc_info=True)
             return f"I encountered an error while processing your request: {str(e)}. Please try again later."
 
+    def stream_response(self, prompt, context=""):
+        """
+        Stream response using Groq (OpenAI-compatible) for Vercel AI SDK.
+        """
+        messages = []
+        if context:
+            messages.append({"role": "system", "content": context})
+        messages.append({"role": "user", "content": prompt})
+
+        try:
+            # Using Groq for streaming as it's reliable and supports OpenAI-style streaming
+            response = requests.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {self.groq_api_key}",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "model": "llama-3.3-70b-versatile",
+                    "messages": messages,
+                    "max_tokens": 1000,
+                    "temperature": 0.7,
+                    "stream": True # Enable streaming
+                },
+                stream=True,
+                timeout=30
+            )
+
+            if response.status_code == 200:
+                for line in response.iter_lines():
+                    if line:
+                        decoded_line = line.decode('utf-8')
+                        if decoded_line.startswith('data: '):
+                            data = decoded_line[6:]
+                            if data == '[DONE]':
+                                break
+                            yield f"data: {data}\n\n"
+            else:
+                yield f"data: {{\"error\": \"Groq API error: {response.status_code}\"}}\n\n"
+        except Exception as e:
+            yield f"data: {{\"error\": \"{str(e)}\"}}\n\n"
+
 # Global instance
 ai_processor = AIProcessor()

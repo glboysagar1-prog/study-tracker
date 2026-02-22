@@ -1,177 +1,44 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useQuery } from 'convex/react';
+import { api } from '../../convex/_generated/api';
 import MaterialCard from './MaterialCard';
 import VideoPlaylist from './VideoPlaylist';
 import LabPrograms from './LabPrograms';
 import ImportantQuestionsList from './ImportantQuestionsList';
-
 import SyllabusViewer from './SyllabusViewer';
 import PreviousPapers from './PreviousPapers';
-
-import { API_BASE_URL } from '../config/api';
 
 const SubjectLibrary = () => {
     const { subjectId } = useParams();
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('syllabus');
-    const [subject, setSubject] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [materials, setMaterials] = useState([]);
 
-    // Fetch subject details
-    useEffect(() => {
-        const fetchSubject = async () => {
-            try {
-                setLoading(true);
-                setError(null);
+    // Fetch subject from Convex by ID
+    const subject = useQuery(api.subjects.getById, subjectId ? { id: subjectId } : "skip");
+    const materials = useQuery(api.studyMaterials.getBySubject, subjectId ? { subjectId } : "skip") ?? [];
 
-                // Validate subjectId
-                console.log("Subject ID from useParams:", subjectId);
-                console.log("Type of subjectId:", typeof subjectId);
-
-                if (!subjectId) {
-                    setError("No subject ID provided");
-                    setLoading(false);
-                    return;
-                }
-
-                // Check if subjectId is a valid number
-                const numericSubjectId = parseInt(subjectId, 10);
-                console.log("Parsed numericSubjectId:", numericSubjectId);
-                console.log("Is NaN:", isNaN(numericSubjectId));
-
-                if (isNaN(numericSubjectId)) {
-                    setError(`Invalid subject ID: ${subjectId}`);
-                    setLoading(false);
-                    return;
-                }
-
-                console.log(`Fetching subject with ID: ${numericSubjectId}`);
-
-                // Fetch specific subject by ID instead of fetching all and filtering
-                const response = await fetch(`${API_BASE_URL}/subjects/${numericSubjectId}`);
-
-                // Check if response is OK
-                console.log("Response status:", response.status);
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    console.error(`HTTP error! status: ${response.status}`, errorText);
-                    if (response.status === 404) {
-                        setError(`Subject with ID ${numericSubjectId} not found in database`);
-                    } else {
-                        setError(`HTTP error! status: ${response.status}`);
-                    }
-                    setLoading(false);
-                    return;
-                }
-
-                const data = await response.json();
-                console.log("Subject data received:", data);
-
-                if (data.subject) {
-                    setSubject(data.subject);
-                } else if (data.error) {
-                    setError(data.error);
-                } else {
-                    setError("Subject not found in response data");
-                }
-            } catch (error) {
-                console.error("Error fetching subject:", error);
-                setError(`Failed to load subject: ${error.message}`);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        console.log("useEffect triggered with subjectId:", subjectId);
-        if (subjectId) {
-            fetchSubject();
-        } else {
-            setLoading(false);
-            setError("No subject ID provided in URL");
-        }
-    }, [subjectId]);
-
-    // Fetch materials when tab changes (for notes/books)
-    useEffect(() => {
-        const fetchMaterials = async () => {
-            if (!subject || !subject.subject_code) return;
-
-            if (['notes', 'book', 'ppt'].includes(activeTab)) {
-                try {
-                    const response = await fetch(`${API_BASE_URL}/study-materials/advanced/${subject.subject_code}?type=${activeTab}`);
-                    const data = await response.json();
-                    if (data.materials) {
-                        setMaterials(data.materials);
-                    }
-                } catch (error) {
-                    console.error("Error fetching materials:", error);
-                }
-            }
-        };
-
-        fetchMaterials();
-    }, [activeTab, subject]);
-
-    const handleDownload = (material) => {
-        if (material.file_url) {
-            window.open(material.file_url, '_blank');
-        } else {
-            alert("File URL not available");
-        }
-    };
-
-    const handleBookmark = async (materialId) => {
-        // Mock user ID for now
-        const userId = "00000000-0000-0000-0000-000000000000";
-        try {
-            await fetch(`${API_BASE_URL}/bookmarks`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ user_id: userId, material_id: materialId })
-            });
-            alert("Bookmarked!");
-        } catch (error) {
-            console.error("Bookmark failed", error);
-        }
-    };
+    const loading = subject === undefined;
 
     if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
 
-    if (error) {
+    if (subject === null) {
         return (
-            <div className="min-h-screen flex items-center justify-center">
-                <div className="bg-white p-8 rounded-lg shadow-md max-w-2xl">
-                    <div className="flex items-center mb-4">
-                        <svg className="w-6 h-6 text-red-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <h2 className="text-2xl font-bold text-gray-800">Error Loading Subject</h2>
-                    </div>
-                    <p className="text-gray-600 mb-4">{error}</p>
-                    <p className="text-gray-500 text-sm mb-4">Subject ID: {subjectId}</p>
-                    <p className="text-gray-500 text-sm">API Base URL: {API_BASE_URL}</p>
-                    <div className="mt-6 flex gap-4">
-                        <button
-                            onClick={() => navigate('/subjects')}
-                            className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
-                        >
-                            ← Back to Subjects
-                        </button>
-                        <button
-                            onClick={() => window.location.reload()}
-                            className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600"
-                        >
-                            Reload Page
-                        </button>
-                    </div>
+            <div className="min-h-screen flex items-center justify-center bg-transparent">
+                <div className="bg-card glass-panel p-8 rounded-xl shadow-2xl max-w-2xl border border-white/10 text-center">
+                    <h2 className="text-2xl font-bold text-white mb-4">Subject Not Found</h2>
+                    <p className="text-slate-400 mb-6 font-mono">Subject ID: {subjectId}</p>
+                    <button onClick={() => navigate('/subjects')} className="px-6 py-3 bg-green-500/10 text-green-400 border border-green-500/20 rounded-lg hover:bg-green-500 hover:text-white transition-all duration-300 shadow-[0_0_15px_rgba(34,197,94,0.15)] hover:shadow-[0_0_25px_rgba(34,197,94,0.3)] cursor-pointer">
+                        ← Back to Subjects
+                    </button>
                 </div>
             </div>
         );
     }
 
-    if (!subject) return <div className="min-h-screen flex items-center justify-center">Subject not found</div>;
+    const filteredMaterials = ['notes', 'book', 'ppt'].includes(activeTab)
+        ? materials.filter(m => m.materialType === activeTab)
+        : [];
 
     const tabs = [
         { id: 'syllabus', label: '📑 Syllabus' },
@@ -185,29 +52,32 @@ const SubjectLibrary = () => {
     ];
 
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen bg-transparent relative z-10">
             {/* Header */}
-            <div className="bg-white shadow-sm border-b border-gray-200">
-                <div className="container mx-auto px-4 py-6">
-                    <div className="flex items-center text-sm text-gray-500 mb-2">
-                        <Link to="/subjects" className="hover:text-blue-600">Subjects</Link>
-                        <span className="mx-2">›</span>
-                        <span>{subject.subject_name}</span>
+            <div className="glass-panel border-b border-white/10 sticky top-0 z-40 backdrop-blur-xl">
+                <div className="container mx-auto px-4 pt-8 pb-4">
+                    <div className="flex items-center text-sm text-slate-400 mb-3 font-mono">
+                        <Link to="/subjects" className="hover:text-green-400 transition-colors duration-200">Subjects</Link>
+                        <span className="mx-3 opacity-50">/</span>
+                        <span className="text-slate-200">{subject.subjectName}</span>
                     </div>
-                    <h1 className="text-3xl font-bold text-gray-900">{subject.subject_name}</h1>
-                    <p className="text-gray-600 mt-1">{subject.subject_code} • Semester {subject.semester}</p>
+                    <h1 className="text-4xl font-bold text-white tracking-tight mb-2">{subject.subjectName}</h1>
+                    <div className="flex items-center gap-3">
+                        <span className="px-2.5 py-1 rounded-md bg-white/5 border border-white/10 text-green-400 font-mono text-xs shadow-[0_0_10px_rgba(34,197,94,0.1)]">{subject.subjectCode}</span>
+                        <span className="px-2.5 py-1 rounded-md bg-white/5 border border-white/10 text-slate-300 font-mono text-xs">Semester {subject.semester}</span>
+                    </div>
                 </div>
 
                 {/* Tabs */}
                 <div className="container mx-auto px-4">
-                    <div className="flex overflow-x-auto hide-scrollbar space-x-6">
+                    <div className="flex overflow-x-auto hide-scrollbar space-x-2 pb-4 pt-2">
                         {tabs.map(tab => (
                             <button
                                 key={tab.id}
                                 onClick={() => setActiveTab(tab.id)}
-                                className={`py-4 px-2 font-medium text-sm whitespace-nowrap border-b-2 transition-colors ${activeTab === tab.id
-                                    ? 'border-blue-600 text-blue-600'
-                                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                className={`py-2 px-5 font-medium text-sm whitespace-nowrap rounded-lg transition-all duration-200 cursor-pointer ${activeTab === tab.id
+                                    ? 'bg-green-500/10 text-green-400 border border-green-500/30 shadow-[0_0_15px_rgba(34,197,94,0.15)]'
+                                    : 'bg-transparent text-slate-400 border border-transparent hover:text-white hover:bg-white/5'
                                     }`}
                             >
                                 {tab.label}
@@ -219,34 +89,35 @@ const SubjectLibrary = () => {
 
             {/* Content */}
             <div className="container mx-auto px-4 py-8">
-                {activeTab === 'syllabus' && <SyllabusViewer subjectCode={subject.subject_code} />}
+                {activeTab === 'syllabus' && <SyllabusViewer subjectId={subjectId} />}
 
                 {['notes', 'book', 'ppt'].includes(activeTab) && (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {materials.length > 0 ? (
-                            materials.map(m => (
+                        {filteredMaterials.length > 0 ? (
+                            filteredMaterials.map(m => (
                                 <MaterialCard
-                                    key={m.id}
-                                    material={m}
-                                    onDownload={handleDownload}
-                                    onBookmark={handleBookmark}
+                                    key={m._id}
+                                    material={{ ...m, id: m._id, file_url: m.content }}
+                                    onDownload={(mat) => window.open(mat.content || mat.file_url, '_blank')}
+                                    onBookmark={() => alert('Bookmarked!')}
                                 />
                             ))
                         ) : (
-                            <div className="col-span-full text-center py-12 text-gray-500">
-                                No materials found for this category.
+                            <div className="col-span-full pt-16 pb-24 text-center">
+                                <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white/5 border border-white/10 mb-6 shadow-inner">
+                                    <span className="material-icons text-3xl text-slate-500">folder_open</span>
+                                </div>
+                                <h3 className="text-xl font-bold text-white tracking-tight mb-2">No materials found</h3>
+                                <p className="text-slate-400 max-w-sm mx-auto">There are currently no {activeTab} available for this subject. Check back later.</p>
                             </div>
                         )}
                     </div>
                 )}
 
-                {activeTab === 'video' && <VideoPlaylist subjectCode={subject.subject_code} />}
-
-                {activeTab === 'lab' && <LabPrograms subjectCode={subject.subject_code} />}
-
-                {activeTab === 'papers' && <PreviousPapers subjectCode={subject.subject_code} />}
-
-                {activeTab === 'important' && <ImportantQuestionsList subjectCode={subject.subject_code} />}
+                {activeTab === 'video' && <VideoPlaylist subjectCode={subject.subjectCode} />}
+                {activeTab === 'lab' && <LabPrograms subjectCode={subject.subjectCode} />}
+                {activeTab === 'papers' && <PreviousPapers subjectId={subjectId} />}
+                {activeTab === 'important' && <ImportantQuestionsList subjectId={subjectId} />}
             </div>
         </div>
     );

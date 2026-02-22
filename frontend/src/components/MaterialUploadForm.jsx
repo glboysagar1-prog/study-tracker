@@ -1,30 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useQuery, useMutation } from 'convex/react';
+import { api } from '../../convex/_generated/api';
 
 const MaterialUploadForm = () => {
-    const [subjects, setSubjects] = useState([]);
+    const subjects = useQuery(api.subjects.list, {}) ?? [];
+    const createMaterial = useMutation(api.studyMaterials.create);
     const [loading, setLoading] = useState(false);
     const [formData, setFormData] = useState({
-        subject_code: '',
-        material_type: 'book',
+        subjectId: '',
+        materialType: 'notes',
         title: '',
-        description: '',
+        content: '',
         unit: '',
-        file_url: '' // In a real app, this would be handled by file upload logic
     });
-
-    useEffect(() => {
-        // Fetch subjects for the dropdown
-        const fetchSubjects = async () => {
-            try {
-                const response = await fetch('/api/subjects');
-                const data = await response.json();
-                if (data.subjects) setSubjects(data.subjects);
-            } catch (error) {
-                console.error("Error fetching subjects", error);
-            }
-        };
-        fetchSubjects();
-    }, []);
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -34,38 +22,17 @@ const MaterialUploadForm = () => {
         e.preventDefault();
         setLoading(true);
 
-        // Mock file upload - in real app, upload to Supabase Storage first
-        // Here we assume file_url is entered manually or we just mock it
-        const payload = {
-            ...formData,
-            uploaded_by: "00000000-0000-0000-0000-000000000000" // Mock User ID
-        };
-
         try {
-            const response = await fetch('/api/study-materials', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(payload),
+            await createMaterial({
+                subjectId: formData.subjectId,
+                title: formData.title,
+                content: formData.content,
+                materialType: formData.materialType,
+                unit: formData.unit ? parseInt(formData.unit) : undefined,
             });
 
-            const data = await response.json();
-
-            if (response.ok) {
-                alert("Material uploaded successfully!");
-                // Reset form
-                setFormData({
-                    subject_code: '',
-                    material_type: 'notes',
-                    title: '',
-                    description: '',
-                    unit: '',
-                    file_url: ''
-                });
-            } else {
-                throw new Error(data.error || "Upload failed");
-            }
+            alert("Material uploaded successfully!");
+            setFormData({ subjectId: '', materialType: 'notes', title: '', content: '', unit: '' });
         } catch (error) {
             console.error("Upload failed", error);
             alert(`Upload failed: ${error.message}`);
@@ -82,15 +49,15 @@ const MaterialUploadForm = () => {
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Subject</label>
                     <select
-                        name="subject_code"
-                        value={formData.subject_code}
+                        name="subjectId"
+                        value={formData.subjectId}
                         onChange={handleChange}
                         className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                         required
                     >
                         <option value="">Select Subject</option>
                         {subjects.map(s => (
-                            <option key={s.id} value={s.subject_code}>{s.subject_name} ({s.subject_code})</option>
+                            <option key={s._id} value={s._id}>{s.subjectName} ({s.subjectCode})</option>
                         ))}
                     </select>
                 </div>
@@ -98,16 +65,15 @@ const MaterialUploadForm = () => {
                 <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Material Type</label>
                     <select
-                        name="material_type"
-                        value={formData.material_type}
+                        name="materialType"
+                        value={formData.materialType}
                         onChange={handleChange}
                         className="w-full p-2 border border-gray-300 rounded-md"
                     >
+                        <option value="notes">📝 Notes</option>
                         <option value="book">📚 Reference Book</option>
-                        <option value="video">🎥 Video Link</option>
-                        <option value="lab">💻 Lab File</option>
                         <option value="ppt">📊 PPT/Slides</option>
-                        <option value="important">❓ Important Questions</option>
+                        <option value="summary">📋 Summary</option>
                     </select>
                 </div>
 
@@ -120,16 +86,6 @@ const MaterialUploadForm = () => {
                         onChange={handleChange}
                         className="w-full p-2 border border-gray-300 rounded-md"
                         required
-                    />
-                </div>
-
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                    <textarea
-                        name="description"
-                        value={formData.description}
-                        onChange={handleChange}
-                        className="w-full p-2 border border-gray-300 rounded-md h-24"
                     />
                 </div>
 
@@ -148,8 +104,8 @@ const MaterialUploadForm = () => {
                         <label className="block text-sm font-medium text-gray-700 mb-1">File/Video URL</label>
                         <input
                             type="url"
-                            name="file_url"
-                            value={formData.file_url}
+                            name="content"
+                            value={formData.content}
                             onChange={handleChange}
                             className="w-full p-2 border border-gray-300 rounded-md"
                             placeholder="https://..."

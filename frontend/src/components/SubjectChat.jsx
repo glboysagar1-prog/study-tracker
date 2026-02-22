@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { API_BASE_URL } from '../config/api';
+import { useAction } from 'convex/react';
+import { api } from '../../convex/_generated/api';
 
 const SubjectChat = ({ subjectCode, subjectName, onClose }) => {
     const [messages, setMessages] = useState([
@@ -8,6 +9,7 @@ const SubjectChat = ({ subjectCode, subjectName, onClose }) => {
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
     const messagesEndRef = useRef(null);
+    const chat = useAction(api.ai.chat);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -18,7 +20,6 @@ const SubjectChat = ({ subjectCode, subjectName, onClose }) => {
     }, [messages]);
 
     const formatResponse = (text) => {
-        // Convert newlines to <br> tags and preserve formatting
         return text.replace(/\n/g, '<br>');
     };
 
@@ -32,58 +33,18 @@ const SubjectChat = ({ subjectCode, subjectName, onClose }) => {
         setLoading(true);
 
         try {
-            // Use local AI service directly
-            await sendToAI(currentInput);
+            const response = await chat({
+                prompt: `You are an AI tutor for the GTU subject "${subjectName}" (${subjectCode}). Answer this student question:\n\n${currentInput}\n\nChat history:\n${messages.map(m => `${m.sender === 'user' ? 'Student' : 'Tutor'}: ${m.text}`).join('\n')}`
+            });
+            setMessages(prev => [...prev, { text: response, sender: 'ai' }]);
         } catch (error) {
             console.error('AI service error:', error);
             setMessages(prev => [...prev, {
-                text: "Sorry, I'm having trouble connecting right now. Please ensure the backend is running.",
+                text: "Sorry, I'm having trouble connecting right now. Please try again later.",
                 sender: 'ai'
             }]);
         } finally {
             setLoading(false);
-        }
-    };
-
-    const sendToAI = async (question) => {
-        try {
-            const response = await fetch(`${API_BASE_URL}/ai-chat/subject`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    subject_code: subjectCode,
-                    question: question,
-                    chat_history: messages.map(m => ({ role: m.sender === 'user' ? 'user' : 'assistant', content: m.text }))
-                }),
-            });
-
-            const data = await response.json();
-
-            if (data.success && data.response) {
-                setMessages(prev => [...prev, { text: data.response, sender: 'ai' }]);
-
-                // Add some generic suggestions
-                const suggestions = [
-                    "Can you explain that with an example?",
-                    "What are the key points I should remember?",
-                    "How does this relate to other topics?"
-                ];
-                // We'll just log these for now, as we don't have a UI for them in this component
-                console.log("Suggestions:", suggestions);
-            } else {
-                setMessages(prev => [...prev, {
-                    text: "Sorry, I encountered an error. Please try again.",
-                    sender: 'ai'
-                }]);
-            }
-        } catch (error) {
-            console.error('Error sending message:', error);
-            setMessages(prev => [...prev, {
-                text: "Sorry, I'm having trouble connecting right now. Please ensure the backend is running.",
-                sender: 'ai'
-            }]);
         }
     };
 
@@ -91,44 +52,6 @@ const SubjectChat = ({ subjectCode, subjectName, onClose }) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
             handleSend();
-        }
-    };
-
-    const handleExplainTopic = async (topic) => {
-        const userMessage = { text: `Explain: ${topic}`, sender: 'user' };
-        setMessages(prev => [...prev, userMessage]);
-        setLoading(true);
-
-        try {
-            const response = await fetch(`${API_BASE_URL}/ai-chat/explain-topic`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    subject_code: subjectCode,
-                    topic: topic
-                }),
-            });
-
-            const data = await response.json();
-
-            if (data.success && data.explanation) {
-                setMessages(prev => [...prev, { text: data.explanation, sender: 'ai' }]);
-            } else {
-                setMessages(prev => [...prev, {
-                    text: "Sorry, I couldn't generate an explanation. Please try again.",
-                    sender: 'ai'
-                }]);
-            }
-        } catch (error) {
-            console.error('Error explaining topic:', error);
-            setMessages(prev => [...prev, {
-                text: "Sorry, I'm having trouble connecting right now.",
-                sender: 'ai'
-            }]);
-        } finally {
-            setLoading(false);
         }
     };
 
@@ -141,32 +64,16 @@ const SubjectChat = ({ subjectCode, subjectName, onClose }) => {
                         <h2 className="text-2xl font-bold">AI Subject Tutor</h2>
                         <p className="text-sm text-blue-100">{subjectName} ({subjectCode})</p>
                     </div>
-                    <button
-                        onClick={onClose}
-                        className="text-white hover:text-gray-200 text-2xl font-bold transition-colors"
-                    >
-                        ×
-                    </button>
+                    <button onClick={onClose} className="text-white hover:text-gray-200 text-2xl font-bold transition-colors">×</button>
                 </div>
 
                 {/* Messages Container */}
                 <div className="flex-grow p-4 overflow-y-auto bg-gray-50">
                     {messages.map((msg, index) => (
-                        <div
-                            key={index}
-                            className={`mb-4 flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
-                        >
-                            <div
-                                className={`max-w-[80%] p-4 rounded-lg ${msg.sender === 'user'
-                                    ? 'bg-blue-600 text-white rounded-br-none'
-                                    : 'bg-white text-gray-800 border border-gray-200 rounded-bl-none shadow-sm'
-                                    }`}
-                            >
+                        <div key={index} className={`mb-4 flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
+                            <div className={`max-w-[80%] p-4 rounded-lg ${msg.sender === 'user' ? 'bg-blue-600 text-white rounded-br-none' : 'bg-white text-gray-800 border border-gray-200 rounded-bl-none shadow-sm'}`}>
                                 {msg.sender === 'ai' ? (
-                                    <div
-                                        className="prose prose-sm max-w-none"
-                                        dangerouslySetInnerHTML={{ __html: formatResponse(msg.text) }}
-                                    />
+                                    <div className="prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: formatResponse(msg.text) }} />
                                 ) : (
                                     <div className="whitespace-pre-wrap">{msg.text}</div>
                                 )}
@@ -195,24 +102,9 @@ const SubjectChat = ({ subjectCode, subjectName, onClose }) => {
                     <div className="px-4 py-2 bg-white border-t border-gray-200">
                         <p className="text-xs text-gray-500 mb-2">Suggested questions:</p>
                         <div className="flex flex-wrap gap-2">
-                            <button
-                                onClick={() => setInput("Explain the key topics in this subject")}
-                                className="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1 rounded-full"
-                            >
-                                Key Topics
-                            </button>
-                            <button
-                                onClick={() => setInput("What are the most important concepts to focus on?")}
-                                className="text-xs bg-purple-50 hover:bg-purple-100 text-purple-700 px-3 py-1 rounded-full"
-                            >
-                                Important Concepts
-                            </button>
-                            <button
-                                onClick={() => setInput("How should I prepare for the exam?")}
-                                className="text-xs bg-green-50 hover:bg-green-100 text-green-700 px-3 py-1 rounded-full"
-                            >
-                                Exam Preparation
-                            </button>
+                            <button onClick={() => setInput("Explain the key topics in this subject")} className="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1 rounded-full">Key Topics</button>
+                            <button onClick={() => setInput("What are the most important concepts to focus on?")} className="text-xs bg-purple-50 hover:bg-purple-100 text-purple-700 px-3 py-1 rounded-full">Important Concepts</button>
+                            <button onClick={() => setInput("How should I prepare for the exam?")} className="text-xs bg-green-50 hover:bg-green-100 text-green-700 px-3 py-1 rounded-full">Exam Preparation</button>
                         </div>
                     </div>
                 )}
@@ -232,19 +124,14 @@ const SubjectChat = ({ subjectCode, subjectName, onClose }) => {
                         <button
                             onClick={handleSend}
                             disabled={loading || !input.trim()}
-                            className={`p-3 rounded-lg text-white transition-all ${loading || !input.trim()
-                                ? 'bg-blue-400 cursor-not-allowed'
-                                : 'bg-blue-600 hover:bg-blue-700 transform hover:scale-105'
-                                }`}
+                            className={`p-3 rounded-lg text-white transition-all ${loading || !input.trim() ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 transform hover:scale-105'}`}
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                             </svg>
                         </button>
                     </div>
-                    <p className="text-xs text-gray-400 mt-2">
-                        💡 Tip: Ask about specific topics, exam patterns, or request explanations of concepts
-                    </p>
+                    <p className="text-xs text-gray-400 mt-2">💡 Tip: Ask about specific topics, exam patterns, or request explanations of concepts</p>
                 </div>
             </div>
         </div>

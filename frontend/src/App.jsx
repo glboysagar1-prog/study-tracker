@@ -40,10 +40,14 @@ function MaterialViewerWrapper() {
 // Layout wrapper for pages that need sidebar
 function AppLayout({ children }) {
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg)' }}>
+    <div className="flex min-h-screen bg-[#030305] text-[#ededed]">
       <Sidebar />
-      <main style={{ flex: 1, overflow: 'auto' }}>
-        {children}
+      <main className="flex-1 overflow-auto relative">
+        {/* Background Mesh */}
+        <div className="fixed inset-0 bg-[radial-gradient(circle_at_50%_0%,_#1a1a2e_0%,_#030305_60%)] pointer-events-none -z-10" />
+        <div className="relative z-0">
+          {children}
+        </div>
       </main>
     </div>
   );

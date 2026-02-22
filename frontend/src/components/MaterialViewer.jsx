@@ -1,381 +1,296 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import React, { useState } from 'react';
+import { useQuery } from 'convex/react';
+import { api } from '../../convex/_generated/api';
 import './MaterialViewer.css';
-
-import { API_BASE_URL } from '../config/api';
+import { BorderBeam } from './ui/BorderBeam';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
 const MaterialViewer = ({ subjectCode }) => {
-    const [subject, setSubject] = useState(null);
-    const [materials, setMaterials] = useState({
-        notes: [],
-        questions: [],
-        references: [],
-        syllabus_content: []
-    });
+    const subject = useQuery(api.subjects.getByCode, subjectCode ? { subjectCode } : "skip");
+    const subjectId = subject?._id;
+    const materials = useQuery(api.studyMaterials.getBySubject, subjectId ? { subjectId } : "skip") ?? [];
+    const questions = useQuery(api.questions.getBySubject, subjectId ? { subjectId } : "skip") ?? [];
+    const syllabusData = useQuery(api.syllabus.getBySubject, subjectId ? { subjectId } : "skip") ?? [];
+
     const [activeTab, setActiveTab] = useState('notes');
     const [selectedUnit, setSelectedUnit] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
     const [previewUrl, setPreviewUrl] = useState(null);
 
-    useEffect(() => {
-        fetchMaterials();
-    }, [subjectCode]);
+    const loading = subject === undefined;
 
-    const fetchMaterials = async () => {
-        setLoading(true);
-        setError(null);
-
-        try {
-            const response = await axios.get(`${API_BASE_URL}/materials/browse`, {
-                params: { subject_code: subjectCode }
-            });
-
-            if (response.data.success) {
-                setSubject(response.data.subject);
-                // Filter out KhudkiBook materials client-side as a safety net
-                const filteredMaterials = {
-                    ...response.data.materials,
-                    notes: (response.data.materials.notes || []).filter(m => m.source_name !== 'KhudkiBook')
-                };
-                setMaterials(filteredMaterials);
-            }
-        } catch (err) {
-            console.error('Failed to fetch materials:', err);
-            setError('Failed to load materials');
-        } finally {
-            setLoading(false);
-        }
-    };
+    // Granular Resource Categorization
+    const notes = materials.filter(m => m.materialType === 'notes');
+    const syllabusFiles = materials.filter(m => m.materialType === 'syllabus');
+    const papers = materials.filter(m => m.materialType === 'paper');
+    const books = materials.filter(m => m.materialType === 'book');
+    const videos = materials.filter(m => m.materialType === 'video');
+    const labs = materials.filter(m => m.materialType === 'lab');
+    const imps = materials.filter(m => m.materialType === 'imp');
+    const ppts = materials.filter(m => m.materialType === 'ppt');
 
     const getUnits = () => {
         const units = new Set();
-        materials.notes.forEach(note => note.unit && units.add(note.unit));
-        materials.questions.forEach(q => q.unit && units.add(q.unit));
+        materials.forEach(m => m.unit && units.add(m.unit));
+        questions.forEach(q => q.unitNumber && units.add(q.unitNumber));
         return Array.from(units).sort((a, b) => a - b);
     };
 
-    const filterByUnit = (items) => {
+    const filterByUnit = (items, unitField = 'unit') => {
         if (!selectedUnit) return items;
-        return items.filter(item => item.unit === selectedUnit);
+        return items.filter(item => item[unitField] === selectedUnit);
     };
 
-    const isNew = (dateString) => {
-        if (!dateString) return false;
-        const date = new Date(dateString);
-        const now = new Date();
-        const diffTime = Math.abs(now - date);
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        return diffDays <= 7;
-    };
-
-    // Convert Google Drive links to preview-compatible format
     const getPreviewUrl = (url) => {
         if (!url) return null;
-
-        // Check if it's a Google Drive link
         if (url.includes('drive.google.com')) {
-            // Extract file ID from various Google Drive URL formats
-            let fileId = null;
-
-            // Format: https://drive.google.com/file/d/FILE_ID/view
             const viewMatch = url.match(/\/file\/d\/([^\/]+)/);
-            if (viewMatch) {
-                fileId = viewMatch[1];
-            }
-
-            // Format: https://drive.google.com/open?id=FILE_ID
+            if (viewMatch) return `https://drive.google.com/file/d/${viewMatch[1]}/preview`;
             const openMatch = url.match(/[?&]id=([^&]+)/);
-            if (openMatch) {
-                fileId = openMatch[1];
-            }
-
-            // If we found a file ID, return preview URL
-            if (fileId) {
-                return `https://drive.google.com/file/d/${fileId}/preview`;
-            }
+            if (openMatch) return `https://drive.google.com/file/d/${openMatch[1]}/preview`;
         }
-
-        // For non-Google Drive links, return as-is
         return url;
     };
 
-    const openPreview = (url) => {
-        const previewCompatibleUrl = getPreviewUrl(url);
-        setPreviewUrl(previewCompatibleUrl);
-    };
-
-    const closePreview = () => {
-        setPreviewUrl(null);
-    };
+    const openPreview = (url) => setPreviewUrl(getPreviewUrl(url));
+    const closePreview = () => setPreviewUrl(null);
 
     if (loading) {
         return (
-            <div className="material-viewer loading">
-                <div className="spinner"></div>
-                <p>Loading materials...</p>
+            <div className="flex justify-center py-20">
+                <div className="text-xl text-indigo-400 font-medium animate-pulse">Loading materials...</div>
             </div>
         );
     }
 
-    if (error) {
+    if (!subject) {
         return (
-            <div className="material-viewer error">
-                <span className="error-icon">⚠️</span>
-                <p>{error}</p>
-            </div>
+            <Card className="glass-panel border-0 p-12 rounded-3xl text-center max-w-lg mx-auto mt-20 bg-transparent text-white">
+                <CardContent>
+                    <span className="text-5xl mb-4 block">⚠️</span>
+                    <p className="text-2xl font-bold">Subject not found</p>
+                </CardContent>
+            </Card>
         );
     }
 
     const units = getUnits();
 
     return (
-        <div className="material-viewer">
+        <div className="material-viewer max-w-7xl mx-auto p-4 md:p-8 space-y-8 relative z-10 w-full font-outfit">
             {/* Subject Header */}
-            <div className="subject-header">
-                <div className="subject-info">
-                    <span className="subject-code-badge">{subject?.subject_code}</span>
-                    <h1>{subject?.subject_name}</h1>
-                    <div className="subject-meta">
-                        <span>{subject?.branch}</span>
-                        <span>•</span>
-                        <span>Semester {subject?.semester}</span>
-                        <span>•</span>
-                        <span>{subject?.credits} Credits</span>
+            <Card className="glass-panel border-0 p-8 md:p-12 rounded-[2rem] relative overflow-hidden text-center md:text-left bg-transparent shadow-none">
+                <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 to-purple-500/10 pointer-events-none" />
+                <div className="relative z-10">
+                    <span className="inline-block bg-white/10 border border-white/20 text-white font-mono rounded-xl px-4 py-1.5 text-sm md:text-base mb-6">{subject.subjectCode}</span>
+                    <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight text-white mb-6 leading-tight">{subject.subjectName}</h1>
+                    <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 md:gap-4 text-gray-300 font-semibold text-sm md:text-base">
+                        <span className="bg-black/30 px-4 py-2 rounded-lg backdrop-blur-sm">{subject.branch}</span>
+                        <span className="text-gray-500">•</span>
+                        <span className="bg-black/30 px-4 py-2 rounded-lg backdrop-blur-sm">Semester {subject.semester}</span>
+                        <span className="text-gray-500">•</span>
+                        <span className="bg-black/30 px-4 py-2 rounded-lg backdrop-blur-sm">{subject.credits} Credits</span>
                     </div>
                 </div>
-            </div>
+                <BorderBeam size={250} duration={12} delay={0} colorFrom="#8b5cf6" colorTo="#3b82f6" />
+            </Card>
 
             {/* Unit Selector */}
             {units.length > 0 && (
-                <div className="unit-selector">
-                    <button
-                        className={`unit-btn ${!selectedUnit ? 'active' : ''}`}
+                <div className="flex flex-wrap gap-3 my-8">
+                    <Button
+                        variant={!selectedUnit ? "default" : "outline"}
+                        className={`px-6 py-6 rounded-2xl font-bold transition-all text-base ${!selectedUnit ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/25 border-0' : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white border-white/10'}`}
                         onClick={() => setSelectedUnit(null)}
                     >
                         All Units
-                    </button>
+                    </Button>
                     {units.map(unit => (
-                        <button
+                        <Button
                             key={unit}
-                            className={`unit-btn ${selectedUnit === unit ? 'active' : ''}`}
+                            variant={selectedUnit === unit ? "default" : "outline"}
+                            className={`px-6 py-6 rounded-2xl font-bold transition-all text-base ${selectedUnit === unit ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/25 border-0' : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white border-white/10'}`}
                             onClick={() => setSelectedUnit(unit)}
                         >
                             Unit {unit}
-                        </button>
+                        </Button>
                     ))}
                 </div>
             )}
 
-            {/* Tabs */}
-            <div className="tabs">
-                <button
-                    className={`tab ${activeTab === 'notes' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('notes')}
-                >
-                    📄 Notes ({materials.notes.length})
-                </button>
-                <button
-                    className={`tab ${activeTab === 'questions' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('questions')}
-                >
-                    ❓ Important Questions ({materials.questions.length})
-                </button>
-                <button
-                    className={`tab ${activeTab === 'references' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('references')}
-                >
-                    📚 References ({materials.references.length})
-                </button>
-                <button
-                    className={`tab ${activeTab === 'syllabus' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('syllabus')}
-                >
-                    📋 Syllabus ({materials.syllabus_content.length})
-                </button>
-            </div>
+            {/* Tabs & Content */}
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                <TabsList className="flex w-full overflow-x-auto gap-2 p-2 bg-black/40 backdrop-blur-md rounded-2xl border border-white/10 hide-scrollbar h-auto justify-start sticky top-0 z-20">
+                    <TabsTrigger value="notes" className="whitespace-nowrap flex-1 px-6 py-3.5 rounded-xl font-bold transition-all data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=inactive]:text-gray-400">📄 Notes ({notes.length})</TabsTrigger>
+                    <TabsTrigger value="syllabus" className="whitespace-nowrap flex-1 px-6 py-3.5 rounded-xl font-bold transition-all data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=inactive]:text-gray-400">📋 Syllabus ({syllabusFiles.length + syllabusData.length})</TabsTrigger>
+                    <TabsTrigger value="paper" className="whitespace-nowrap flex-1 px-6 py-3.5 rounded-xl font-bold transition-all data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=inactive]:text-gray-400">📰 Papers ({papers.length})</TabsTrigger>
+                    <TabsTrigger value="books" className="whitespace-nowrap flex-1 px-6 py-3.5 rounded-xl font-bold transition-all data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=inactive]:text-gray-400">📚 Books ({books.length})</TabsTrigger>
+                    <TabsTrigger value="videos" className="whitespace-nowrap flex-1 px-6 py-3.5 rounded-xl font-bold transition-all data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=inactive]:text-gray-400">🎥 Videos ({videos.length})</TabsTrigger>
+                    <TabsTrigger value="labs" className="whitespace-nowrap flex-1 px-6 py-3.5 rounded-xl font-bold transition-all data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=inactive]:text-gray-400">🧪 Labs ({labs.length})</TabsTrigger>
+                    <TabsTrigger value="imp" className="whitespace-nowrap flex-1 px-6 py-3.5 rounded-xl font-bold transition-all data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=inactive]:text-gray-400">💎 IMP ({imps.length})</TabsTrigger>
+                    <TabsTrigger value="ppt" className="whitespace-nowrap flex-1 px-6 py-3.5 rounded-xl font-bold transition-all data-[state=active]:bg-white/10 data-[state=active]:text-white data-[state=inactive]:text-gray-400">📊 PPT ({ppts.length})</TabsTrigger>
+                </TabsList>
 
-            {/* Tab Content */}
-            <div className="tab-content">
-                {activeTab === 'notes' && (
-                    <div className="notes-list">
-                        {filterByUnit(materials.notes).length === 0 ? (
-                            <p className="empty-state">No notes available yet.</p>
+                {/* Content Sections */}
+                <TabsContent value="notes" className="mt-8 outline-none focus:ring-0">
+                    <MaterialGrid items={filterByUnit(notes)} openPreview={openPreview} colorFrom="#4f46e5" colorTo="#c026d3" emptyMsg="No notes available yet." />
+                </TabsContent>
+
+                <TabsContent value="syllabus" className="mt-8 outline-none">
+                    <div className="space-y-8">
+                        {syllabusFiles.length > 0 && <MaterialGrid items={syllabusFiles} openPreview={openPreview} colorFrom="#ec4899" colorTo="#8b5cf6" title="Official Syllabus Files" />}
+                        <div className="grid grid-cols-1 gap-6">
+                            {syllabusData.map(unit => (
+                                <Card key={unit._id} className="glass-panel group border-0 rounded-3xl relative overflow-hidden bg-transparent shadow-none">
+                                    <ViewSyllabusUnit unit={unit} />
+                                    <BorderBeam size={200} duration={14} className="opacity-0 group-hover:opacity-100 transition-opacity" colorFrom="#f43f5e" colorTo="#8b5cf6" />
+                                </Card>
+                            ))}
+                        </div>
+                    </div>
+                </TabsContent>
+
+                <TabsContent value="paper" className="mt-8 outline-none">
+                    <MaterialGrid items={papers} openPreview={openPreview} colorFrom="#ef4444" colorTo="#f59e0b" emptyMsg="No past papers available yet." />
+                </TabsContent>
+
+                <TabsContent value="books" className="mt-8 outline-none">
+                    <MaterialGrid items={books} openPreview={openPreview} colorFrom="#10b981" colorTo="#3b82f6" emptyMsg="No textbooks available yet." />
+                </TabsContent>
+
+                <TabsContent value="videos" className="mt-8 outline-none">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {videos.length === 0 ? (
+                            <p className="col-span-full text-center py-12 text-gray-400 font-medium text-lg bg-white/5 rounded-3xl border border-white/10">No videos available yet.</p>
                         ) : (
-                            filterByUnit(materials.notes).map(note => (
-                                <div key={note.id} className="material-card">
-                                    <div className="card-header">
-                                        <div className="header-top">
-                                            <h3>{note.title}</h3>
-                                            {isNew(note.created_at) && <span className="new-badge">NEW</span>}
-                                        </div>
-                                        {note.unit && <span className="unit-badge">Unit {note.unit}</span>}
-                                    </div>
-                                    {note.description && <p className="description">{note.description}</p>}
-                                    <div className="card-footer">
-                                        <div className="source-attribution">
-                                            <span>From {note.source_name || 'External Source'}</span>
-                                            {note.source_url && (
-                                                <a href={note.source_url} target="_blank" rel="noopener noreferrer" className="source-link">
-                                                    View Source ↗
-                                                </a>
-                                            )}
-                                        </div>
-                                        <div className="action-buttons">
-                                            {note.file_url && (
-                                                <>
-                                                    <a
-                                                        href={note.file_url}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="btn-primary"
-                                                    >
-                                                        Open PDF ↗
-                                                    </a>
-                                                    <button
-                                                        onClick={() => openPreview(note.file_url)}
-                                                        className="btn-secondary"
-                                                    >
-                                                        Preview
-                                                    </button>
-                                                </>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                            ))
+                            videos.map(video => <VideoCard key={video._id} video={video} />)
                         )}
                     </div>
-                )}
+                </TabsContent>
 
-                {activeTab === 'questions' && (
-                    <div className="questions-list">
-                        {filterByUnit(materials.questions).length === 0 ? (
-                            <p className="empty-state">No important questions available yet.</p>
-                        ) : (
-                            filterByUnit(materials.questions).map(question => (
-                                <div key={question.id} className="material-card question-card">
-                                    <div className="card-header">
-                                        <div className="question-meta">
-                                            {question.unit && <span className="unit-badge">Unit {question.unit}</span>}
-                                            {question.marks && <span className="marks-badge">{question.marks} Marks</span>}
-                                            {question.difficulty && <span className="difficulty-badge">{question.difficulty}</span>}
-                                            {isNew(question.created_at) && <span className="new-badge">NEW</span>}
-                                        </div>
-                                    </div>
-                                    <p className="question-text">{question.question_text}</p>
-                                    {question.answer_text && (
-                                        <details className="answer-section">
-                                            <summary>View Answer</summary>
-                                            <p>{question.answer_text}</p>
-                                        </details>
-                                    )}
-                                    <div className="card-footer">
-                                        <div className="source-attribution">
-                                            <span>From {question.source_name || 'External Source'}</span>
-                                            {question.source_url && (
-                                                <a href={question.source_url} target="_blank" rel="noopener noreferrer" className="source-link">
-                                                    Open Source →
-                                                </a>
-                                            )}
-                                        </div>
-                                        {question.frequency && question.frequency > 1 && (
-                                            <span className="frequency">Asked {question.frequency} times</span>
-                                        )}
-                                    </div>
-                                </div>
-                            ))
-                        )}
-                    </div>
-                )}
+                <TabsContent value="labs" className="mt-8 outline-none">
+                    <MaterialGrid items={filterByUnit(labs)} openPreview={openPreview} colorFrom="#06b6d4" colorTo="#3b82f6" emptyMsg="No lab manuals available yet." />
+                </TabsContent>
 
-                {activeTab === 'references' && (
-                    <div className="references-list">
-                        {materials.references.length === 0 ? (
-                            <p className="empty-state">No reference materials available yet.</p>
-                        ) : (
-                            materials.references.map(ref => (
-                                <div key={ref.id} className="material-card reference-card">
-                                    <div className="card-header">
-                                        <div className="header-top">
-                                            <h3>{ref.title}</h3>
-                                            {isNew(ref.created_at) && <span className="new-badge">NEW</span>}
-                                        </div>
-                                        <span className="type-badge">{ref.material_type}</span>
-                                    </div>
-                                    {ref.author && <p className="author">By {ref.author}</p>}
-                                    {ref.description && <p className="description">{ref.description}</p>}
-                                    {ref.publisher && <p className="meta">Publisher: {ref.publisher}</p>}
-                                    {ref.isbn && <p className="meta">ISBN: {ref.isbn}</p>}
-                                    <div className="card-footer">
-                                        <div className="source-attribution">
-                                            <span>From {ref.source_name || 'External Source'}</span>
-                                        </div>
-                                        {ref.url && (
-                                            <a href={ref.url} target="_blank" rel="noopener noreferrer" className="download-btn">
-                                                View Resource →
-                                            </a>
-                                        )}
-                                    </div>
-                                </div>
-                            ))
-                        )}
-                    </div>
-                )}
+                <TabsContent value="imp" className="mt-8 outline-none">
+                    <MaterialGrid items={filterByUnit(imps)} openPreview={openPreview} colorFrom="#f59e0b" colorTo="#ef4444" emptyMsg="No IMP questions available yet." />
+                </TabsContent>
 
-                {activeTab === 'syllabus' && (
-                    <div className="syllabus-list">
-                        {filterByUnit(materials.syllabus_content).length === 0 ? (
-                            <p className="empty-state">No syllabus content available yet.</p>
-                        ) : (
-                            filterByUnit(materials.syllabus_content).map(content => (
-                                <div key={content.id} className="material-card syllabus-card">
-                                    <div className="card-header">
-                                        <h3>{content.unit_title || `Unit ${content.unit}`}</h3>
-                                        {content.unit && <span className="unit-badge">Unit {content.unit}</span>}
-                                    </div>
-                                    {content.topic && <h4 className="topic">{content.topic}</h4>}
-                                    {content.content && <p className="content">{content.content}</p>}
-                                    {content.source_url && (
-                                        <div className="card-footer">
-                                            <a href={content.source_url} target="_blank" rel="noopener noreferrer" className="source-link">
-                                                View Full Syllabus →
-                                            </a>
-                                        </div>
-                                    )}
-                                </div>
-                            ))
-                        )}
-                    </div>
-                )}
-            </div>
+                <TabsContent value="ppt" className="mt-8 outline-none">
+                    <MaterialGrid items={filterByUnit(ppts)} openPreview={openPreview} colorFrom="#8b5cf6" colorTo="#d946ef" emptyMsg="No presentations available yet." />
+                </TabsContent>
+            </Tabs>
 
             {/* Preview Modal */}
-            {previewUrl && (
-                <div className="modal-overlay" onClick={closePreview}>
-                    <div className="modal-content" onClick={e => e.stopPropagation()}>
-                        <div className="modal-header">
-                            <h3>Document Preview</h3>
-                            <button className="close-btn" onClick={closePreview}>×</button>
-                        </div>
-                        <div className="modal-body">
-                            <iframe
-                                src={previewUrl.includes('drive.google.com') ? previewUrl.replace('/view', '/preview') : previewUrl}
-                                title="Document Preview"
-                                width="100%"
-                                height="600px"
-                            ></iframe>
-                        </div>
-                        <div className="modal-footer">
-                            <a href={previewUrl} target="_blank" rel="noopener noreferrer" className="download-btn">
-                                Open in New Tab
-                            </a>
-                        </div>
+            <Dialog open={!!previewUrl} onOpenChange={(open) => !open && closePreview()}>
+                <DialogContent className="max-w-5xl h-[90vh] p-0 gap-0 bg-[#0f0f14]/95 backdrop-blur-3xl border-white/10 overflow-hidden rounded-3xl shadow-2xl">
+                    <DialogHeader className="p-6 border-b border-white/10 bg-black/40">
+                        <DialogTitle className="text-white text-2xl font-bold">Document Preview</DialogTitle>
+                    </DialogHeader>
+                    <div className="flex-1 h-full w-full bg-black/90">
+                        {previewUrl && (
+                            <iframe src={previewUrl} title="Document Preview" className="w-full h-[calc(90vh-180px)] border-none bg-transparent" />
+                        )}
                     </div>
-                </div>
-            )}
+                    <div className="p-6 border-t border-white/10 bg-black/40 flex justify-end">
+                        <Button asChild variant="outline" className="bg-white/5 hover:bg-white/10 text-white border-white/10 py-5 px-6 rounded-xl font-semibold text-base transition-colors">
+                            <a href={previewUrl} target="_blank" rel="noopener noreferrer">Open in New Tab</a>
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 };
+
+const MaterialGrid = ({ items, openPreview, colorFrom, colorTo, emptyMsg, title }) => (
+    <div className="space-y-6">
+        {title && <h2 className="text-2xl font-bold text-white mb-4 ml-2">{title}</h2>}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {items.length === 0 ? (
+                <p className="col-span-full text-center py-12 text-gray-400 font-medium text-lg bg-white/5 rounded-3xl border border-white/10">{emptyMsg}</p>
+            ) : (
+                items.map(item => (
+                    <UnifiedMaterialCard key={item._id} item={item} openPreview={openPreview} colorFrom={colorFrom} colorTo={colorTo} />
+                ))
+            )}
+        </div>
+    </div>
+);
+
+const ViewSyllabusUnit = ({ unit }) => (
+    <CardContent className="p-8">
+        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+            <h3 className="text-2xl font-bold text-white">{unit.unitTitle || `Unit ${unit.unitNumber}`}</h3>
+            {unit.unitNumber && <span className="bg-rose-500/20 text-rose-300 px-4 py-1.5 rounded-xl font-bold border border-rose-500/30 whitespace-nowrap">Unit {unit.unitNumber}</span>}
+        </div>
+        <div className="relative z-10 text-gray-300 text-lg leading-relaxed bg-black/20 p-6 rounded-2xl border border-white/5">
+            {unit.content && <p className="whitespace-pre-wrap">{unit.content}</p>}
+        </div>
+    </CardContent>
+);
+
+const UnifiedMaterialCard = ({ item, openPreview, colorFrom, colorTo }) => (
+    <Card className="glass-panel group border-0 rounded-3xl relative overflow-hidden bg-transparent shadow-none min-h-[220px]">
+        <CardContent className="p-6 flex flex-col justify-between h-full">
+            <div className="relative z-10 mb-6">
+                <div className="flex justify-between items-start gap-4">
+                    <h3 className="text-xl font-bold text-white leading-snug group-hover:text-indigo-300 transition-colors uppercase tracking-tight">{item.title}</h3>
+                    <div className="flex flex-col items-end gap-2 shrink-0">
+                        {item.unit && <span className="bg-white/5 text-gray-300 px-3 py-1 rounded-lg text-sm font-bold border border-white/10">U{item.unit}</span>}
+                        {item.source && (
+                            <span className="bg-indigo-500/10 text-indigo-400 px-2.5 py-1 rounded-md text-[10px] font-bold border border-indigo-500/20 uppercase tracking-tighter">
+                                {item.source.split('.')[0]}
+                            </span>
+                        )}
+                    </div>
+                </div>
+            </div>
+            <div className="relative z-10 flex flex-col gap-4 mt-auto">
+                <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: colorFrom }} />
+                    <div className="text-xs font-bold text-gray-300 uppercase tracking-widest">{item.materialType}</div>
+                </div>
+                <div className="flex gap-3">
+                    <Button onClick={() => openPreview(item.content)} className="flex-1 py-6 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl shadow-lg shadow-indigo-500/20 transition-all text-base border-0">Preview</Button>
+                    <Button asChild variant="outline" className="flex-1 py-6 bg-white/5 hover:bg-white/10 text-white font-bold rounded-xl transition-all border-white/10 text-base">
+                        <a href={item.content} target="_blank" rel="noopener noreferrer">Download ↗</a>
+                    </Button>
+                </div>
+            </div>
+            <BorderBeam size={150} duration={8} delay={Math.random()} className="opacity-0 group-hover:opacity-100 transition-opacity" colorFrom={colorFrom} colorTo={colorTo} />
+        </CardContent>
+    </Card>
+);
+
+const VideoCard = ({ video }) => (
+    <Card className="glass-panel group border-0 rounded-3xl relative overflow-hidden bg-transparent shadow-none min-h-[200px]">
+        <CardContent className="p-6 flex flex-col justify-between h-full">
+            <div className="relative z-10 mb-4">
+                <div className="aspect-video w-full rounded-2xl bg-black/40 mb-4 relative overflow-hidden group-hover:scale-[1.02] transition-transform border border-white/10 shadow-2xl">
+                    <img
+                        src={`https://img.youtube.com/vi/${new URL(video.content).searchParams.get('v')}/mqdefault.jpg`}
+                        alt="Thumbnail"
+                        className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity"
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="w-14 h-14 bg-red-600 text-white rounded-full flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform">
+                            <span className="material-icons text-3xl">play_arrow</span>
+                        </div>
+                    </div>
+                </div>
+                <h4 className="font-bold text-white text-lg line-clamp-2 leading-tight group-hover:text-red-400 transition-colors">
+                    {video.title}
+                </h4>
+            </div>
+            <Button asChild className="relative z-10 w-full bg-red-600/10 hover:bg-red-600 text-white rounded-xl py-6 font-bold transition-all border border-red-500/20 hover:shadow-[0_0_30px_rgba(239,68,68,0.4)] text-base">
+                <a href={video.content} target="_blank" rel="noopener noreferrer">Watch Tutorial ↗</a>
+            </Button>
+            <BorderBeam size={200} duration={10} colorFrom="#ef4444" colorTo="#c026d3" className="opacity-0 group-hover:opacity-100 transition-opacity" />
+        </CardContent>
+    </Card>
+);
 
 export default MaterialViewer;

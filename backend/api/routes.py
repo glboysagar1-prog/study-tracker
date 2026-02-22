@@ -387,6 +387,30 @@ def ai_assistant():
     except Exception as e:
         return jsonify({'error': f'AI response generation failed: {str(e)}'}), 500
 
+@api_bp.route('/chat', methods=['POST'])
+def chat():
+    """
+    Streaming chat endpoint for Vercel AI SDK
+    """
+    from flask import Response
+    try:
+        data = request.get_json()
+        messages = data.get('messages', [])
+        
+        if not messages:
+            return jsonify({'error': 'No messages provided'}), 400
+        
+        # Get the last user message
+        last_message = messages[-1]['content']
+        context = "You are an AI tutor helping GTU students prepare for their exams. Provide clear, concise, and accurate explanations."
+        
+        return Response(
+            ai_processor.stream_response(last_message, context),
+            mimetype='text/event-stream'
+        )
+    except Exception as e:
+        return jsonify({'error': f'Chat failed: {str(e)}'}), 500
+
 @api_bp.route('/summarize-unit', methods=['POST'])
 def summarize_unit():
     """

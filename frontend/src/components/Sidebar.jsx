@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { cn } from '../lib/utils';
 
 const Sidebar = () => {
   const location = useLocation();
@@ -46,308 +47,92 @@ const Sidebar = () => {
   };
 
   return (
-    <aside className="sidebar">
+    <aside className="sidebar glass-panel border-r-0 border-t-0 border-b-0 w-[280px] h-screen sticky top-0 flex flex-col z-50">
       {/* Sidebar Header */}
-      <div className="sidebar-header">
-        <div className="logo">
-          <div className="logo-icon">🎓</div>
-          <span>GTU Exam Prep</span>
+      <div className="sidebar-header p-8">
+        <div className="logo flex items-center gap-4">
+          <div className="logo-icon w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-2xl shadow-lg shadow-indigo-500/20">🎓</div>
+          <span className="text-xl font-extrabold tracking-tight text-white">GTU <span className="text-gradient">Prep</span></span>
         </div>
       </div>
 
       {/* Navigation Menu */}
-      <nav className="nav-menu">
-        {/* Main Section */}
-        <div className="nav-section">
-          <div className="nav-section-title">Main</div>
-          {navSections.main.map((item) => (
-            <Link
-              key={item.path}
-              to={item.path}
-              className={`nav-item ${isActive(item.path) ? 'active' : ''}`}
-            >
-              <span className="material-icons">{item.icon}</span>
-              <span>{item.label}</span>
-            </Link>
-          ))}
-        </div>
-
-        {/* Resources Section */}
-        <div className="nav-section">
-          <div className="nav-section-title">Resources</div>
-          {navSections.resources.map((item) => (
-            <Link
-              key={item.path}
-              to={item.path}
-              className={`nav-item ${isActive(item.path) ? 'active' : ''}`}
-            >
-              <span className="material-icons">{item.icon}</span>
-              <span>{item.label}</span>
-            </Link>
-          ))}
-        </div>
-
-        {/* Tools Section */}
-        <div className="nav-section">
-          <div className="nav-section-title">Tools</div>
-          {navSections.tools.map((item) => (
-            <Link
-              key={item.path}
-              to={item.path}
-              className={`nav-item ${isActive(item.path) ? 'active' : ''}`}
-            >
-              <span className="material-icons">{item.icon}</span>
-              <span>{item.label}</span>
-            </Link>
-          ))}
-        </div>
+      <nav className="nav-menu flex-1 px-4 py-2 overflow-y-auto hide-scrollbar space-y-8">
+        {/* Sections Mapping */}
+        {Object.entries(navSections).map(([sectionName, items]) => (
+          <div key={sectionName} className="nav-section">
+            <div className="nav-section-title px-4 mb-3 text-[11px] font-bold uppercase tracking-[2px] text-gray-500 opacity-80">{sectionName}</div>
+            <div className="space-y-1">
+              {items.map((item) => (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  className={cn(
+                    "flex items-center gap-3.5 px-4 py-3 rounded-xl transition-all duration-300 font-medium text-sm group",
+                    isActive(item.path)
+                      ? "bg-indigo-500/10 text-white shadow-sm border border-indigo-500/20"
+                      : "text-gray-400 hover:text-white hover:bg-white/5"
+                  )}
+                >
+                  <span className={cn(
+                    "material-icons text-[20px] transition-transform group-hover:scale-110",
+                    isActive(item.path) ? "text-indigo-400" : "opacity-70"
+                  )}>{item.icon}</span>
+                  <span>{item.label}</span>
+                  {isActive(item.path) && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.8)]" />}
+                </Link>
+              ))}
+            </div>
+          </div>
+        ))}
       </nav>
 
       {/* User Section */}
-      <div className="user-section">
+      <div className="user-section p-4 mt-auto border-t border-white/5 bg-black/20 backdrop-blur-md">
         {user ? (
-          <>
+          <div className="space-y-4">
             {/* Credit Balance Display */}
-            <div className="credit-display">
-              <span className="material-icons">bolt</span>
-              <span className="credit-amount">{profile?.ai_credits ?? 200}</span>
-              <span className="credit-label">AI Credits</span>
+            <div className="credit-display flex items-center gap-3 p-4 rounded-2xl bg-gradient-to-br from-amber-400/10 to-orange-500/10 border border-amber-500/20">
+              <div className="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center text-amber-500">
+                <span className="material-icons text-lg">bolt</span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-xs font-bold text-amber-500/80 uppercase tracking-wider">AI Credits</span>
+                <span className="text-lg font-extrabold text-white">{profile?.ai_credits ?? 200}</span>
+              </div>
             </div>
 
-            <div className="user-profile">
-              <div className="user-avatar">{profile?.username?.charAt(0)?.toUpperCase() || user.email?.charAt(0)?.toUpperCase() || 'U'}</div>
-              <div className="user-info">
-                <div className="user-name">{profile?.username || user.email?.split('@')[0]}</div>
-                <div className="user-role">
-                  {profile?.semester ? `Semester ${profile.semester}` : ''}
+            <div className="user-profile flex items-center gap-3 p-3 rounded-2xl hover:bg-white/5 transition-colors group">
+              <div className="user-avatar w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-500 to-rose-500 flex items-center justify-center text-white font-bold text-lg shadow-inner ring-2 ring-white/10 group-hover:ring-white/20 transition-all">
+                {profile?.username?.charAt(0)?.toUpperCase() || user.email?.charAt(0)?.toUpperCase() || 'U'}
+              </div>
+              <div className="user-info flex-1 min-w-0">
+                <div className="user-name text-sm font-bold text-white truncate">{profile?.username || user.email?.split('@')[0]}</div>
+                <div className="user-role text-[10px] font-bold text-gray-500 uppercase tracking-widest truncate">
+                  {profile?.semester ? `Sem ${profile.semester}` : ''}
                   {profile?.branch ? ` • ${profile.branch.split(' ')[0]}` : ''}
                 </div>
               </div>
-              <button onClick={handleSignOut} className="logout-btn" title="Sign out">
-                <span className="material-icons">logout</span>
+              <button onClick={handleSignOut} className="w-9 h-9 flex items-center justify-center rounded-lg text-gray-400 hover:text-rose-400 hover:bg-rose-500/10 transition-all" title="Sign out">
+                <span className="material-icons text-xl">logout</span>
               </button>
             </div>
-          </>
+          </div>
         ) : (
-          <div className="auth-buttons">
-            <Link to="/login" className="auth-btn login-btn">Sign In</Link>
-            <Link to="/register" className="auth-btn register-btn">Register</Link>
+          <div className="auth-buttons flex flex-col gap-2">
+            <Link to="/login" className="px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm text-center transition-all shadow-lg shadow-indigo-500/20">Sign In</Link>
+            <Link to="/register" className="px-6 py-3 rounded-xl border border-white/10 text-white hover:bg-white/5 font-bold text-sm text-center transition-all">Register</Link>
           </div>
         )}
       </div>
 
       <style jsx>{`
-        .sidebar {
-          width: 280px;
-          background: var(--surface);
-          box-shadow: 2px 0 10px rgba(0,0,0,0.05);
-          display: flex;
-          flex-direction: column;
-          position: sticky;
-          top: 0;
-          height: 100vh;
-          overflow-y: auto;
+        .hide-scrollbar::-webkit-scrollbar {
+          display: none;
         }
-
-        .sidebar-header {
-          padding: 24px;
-          border-bottom: 1px solid var(--border);
-        }
-
-        .logo {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          font-size: 20px;
-          font-weight: 700;
-          color: var(--primary);
-        }
-
-        .logo-icon {
-          width: 40px;
-          height: 40px;
-          background: linear-gradient(135deg, var(--primary), var(--secondary));
-          border-radius: 10px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: white;
-          font-size: 24px;
-        }
-
-        .nav-menu {
-          flex: 1;
-          padding: 16px;
-          overflow-y: auto;
-        }
-
-        .nav-section {
-          margin-bottom: 24px;
-        }
-
-        .nav-section-title {
-          font-size: 11px;
-          font-weight: 700;
-          text-transform: uppercase;
-          color: var(--text-secondary);
-          padding: 8px 16px;
-          letter-spacing: 0.5px;
-        }
-
-        .nav-item {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          padding: 12px 16px;
-          border-radius: 10px;
-          margin-bottom: 4px;
-          cursor: pointer;
-          transition: all 0.2s;
-          color: var(--text-secondary);
-          font-weight: 500;
-          font-size: 14px;
-          text-decoration: none;
-        }
-
-        .nav-item:hover {
-          background: #f1f5f9;
-          color: var(--text);
-        }
-
-        .nav-item.active {
-          background: linear-gradient(135deg, var(--primary), var(--secondary));
-          color: white;
-          box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
-        }
-
-        .nav-item .material-icons {
-          font-size: 20px;
-        }
-
-        .user-section {
-          padding: 16px;
-          border-top: 1px solid var(--border);
-        }
-
-        .user-profile {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          padding: 12px;
-          border-radius: 12px;
-          cursor: pointer;
-          transition: all 0.2s;
-        }
-
-        .user-profile:hover {
-          background: #f1f5f9;
-        }
-
-        .user-avatar {
-          width: 40px;
-          height: 40px;
-          border-radius: 50%;
-          background: linear-gradient(135deg, #f59e0b, #ef4444);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: white;
-          font-weight: 700;
-        }
-
-        .user-info {
-          flex: 1;
-        }
-
-        .user-name {
-          font-weight: 600;
-          font-size: 14px;
-          color: var(--text);
-        }
-
-        .user-role {
-          font-size: 12px;
-          color: var(--text-secondary);
-        }
-
-        .credit-display {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          padding: 12px 16px;
-          background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
-          border-radius: 12px;
-          margin-bottom: 12px;
-        }
-
-        .credit-display .material-icons {
-          color: #78350f;
-          font-size: 20px;
-        }
-
-        .credit-amount {
-          font-size: 20px;
-          font-weight: 700;
-          color: #78350f;
-        }
-
-        .credit-label {
-          font-size: 12px;
-          color: #92400e;
-          margin-left: auto;
-        }
-
-        .logout-btn {
-          background: none;
-          border: none;
-          cursor: pointer;
-          padding: 8px;
-          border-radius: 8px;
-          color: var(--text-secondary);
-          transition: all 0.2s;
-        }
-
-        .logout-btn:hover {
-          background: #fee2e2;
-          color: #dc2626;
-        }
-
-        .auth-buttons {
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-          padding: 12px;
-        }
-
-        .auth-btn {
-          padding: 12px 16px;
-          border-radius: 8px;
-          text-align: center;
-          font-weight: 600;
-          font-size: 14px;
-          text-decoration: none;
-          transition: all 0.2s;
-        }
-
-        .login-btn {
-          background: linear-gradient(135deg, #3b82f6, #8b5cf6);
-          color: white;
-        }
-
-        .login-btn:hover {
-          transform: translateY(-1px);
-          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-        }
-
-        .register-btn {
-          background: transparent;
-          border: 2px solid var(--primary);
-          color: var(--primary);
-        }
-
-        .register-btn:hover {
-          background: var(--primary);
-          color: white;
+        .hide-scrollbar {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
         }
       `}</style>
     </aside>

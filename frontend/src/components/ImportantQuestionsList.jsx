@@ -1,40 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import { useQuery } from 'convex/react';
+import { api } from '../../convex/_generated/api';
 
-import { API_BASE_URL } from '../config/api';
-
-const ImportantQuestionsList = ({ subjectCode }) => {
-    const [questions, setQuestions] = useState([]);
-    const [loading, setLoading] = useState(true);
+const ImportantQuestionsList = ({ subjectId }) => {
+    const allQuestions = useQuery(api.questions.getBySubject, subjectId ? { subjectId } : "skip") ?? [];
+    const loading = allQuestions === undefined;
     const [filter, setFilter] = useState('all');
     const [openAnswerId, setOpenAnswerId] = useState(null);
 
-    useEffect(() => {
-        const fetchQuestions = async () => {
-            try {
-                let url = `${API_BASE_URL}/important-questions/advanced/${subjectCode}`;
-                if (filter !== 'all') {
-                    // Simple mapping for demo, ideally backend handles complex filtering
-                    if (filter === '1-mark') url += '?marks=1';
-                    else if (filter === '3-mark') url += '?marks=3';
-                    else if (filter === '7-mark') url += '?marks=7';
-                }
-
-                const response = await fetch(url);
-                const data = await response.json();
-                if (data.questions) {
-                    setQuestions(data.questions);
-                }
-            } catch (error) {
-                console.error("Error fetching questions:", error);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        if (subjectCode) {
-            fetchQuestions();
-        }
-    }, [subjectCode, filter]);
+    const questions = filter === 'all'
+        ? allQuestions.filter(q => q.isImportant)
+        : allQuestions.filter(q => {
+            if (filter === '1-mark') return q.marks === 1;
+            if (filter === '3-mark') return q.marks <= 4 && q.marks > 1;
+            if (filter === '7-mark') return q.marks >= 7;
+            return true;
+        });
 
     const toggleAnswer = (id) => {
         setOpenAnswerId(openAnswerId === id ? null : id);
@@ -49,9 +30,9 @@ const ImportantQuestionsList = ({ subjectCode }) => {
                     <button
                         key={f}
                         onClick={() => setFilter(f)}
-                        className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${filter === f
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 cursor-pointer ${filter === f
+                            ? 'bg-green-500/10 text-green-400 border border-green-500/30 shadow-[0_0_10px_rgba(34,197,94,0.1)]'
+                            : 'bg-white/5 text-slate-400 hover:text-white hover:bg-white/10 border border-transparent'
                             }`}
                     >
                         {f === 'all' ? 'All Questions' : f.replace('-', ' ').toUpperCase()}
@@ -61,41 +42,42 @@ const ImportantQuestionsList = ({ subjectCode }) => {
 
             <div className="space-y-4">
                 {questions.length === 0 ? (
-                    <div className="text-center text-gray-500 py-8">No questions found for this filter.</div>
+                    <div className="text-center text-slate-500 py-12 bg-white/5 rounded-xl border border-white/10 font-mono">No questions found for this filter.</div>
                 ) : (
                     questions.map((q) => (
-                        <div key={q.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                            <div className="flex justify-between items-start mb-2">
+                        <div key={q._id} className="bg-card glass-panel rounded-xl shadow-sm border border-white/10 p-5 group hover:border-white/20 transition-colors duration-300">
+                            <div className="flex justify-between items-start mb-4">
                                 <div className="flex gap-2">
-                                    <span className="bg-yellow-100 text-yellow-800 text-xs font-bold px-2 py-1 rounded">
+                                    <span className="bg-amber-500/10 text-amber-400 border border-amber-500/20 text-xs font-mono font-bold px-2.5 py-1 rounded-md">
                                         {q.marks} Marks
                                     </span>
-                                    <span className="bg-gray-100 text-gray-600 text-xs font-bold px-2 py-1 rounded">
-                                        Unit {q.unit}
+                                    <span className="bg-white/10 text-slate-300 border border-white/10 text-xs font-mono font-bold px-2.5 py-1 rounded-md">
+                                        Unit {q.unitNumber}
                                     </span>
-                                    {q.frequency > 3 && (
-                                        <span className="bg-red-100 text-red-800 text-xs font-bold px-2 py-1 rounded">
+                                    {q.frequencyCount > 3 && (
+                                        <span className="bg-red-500/10 text-red-400 border border-red-500/20 text-xs font-mono font-bold px-2.5 py-1 rounded-md flex items-center gap-1">
                                             🔥 Frequent
                                         </span>
                                     )}
                                 </div>
-                                <div className="text-xs text-gray-500">
-                                    Last asked: {q.last_asked_year || 'N/A'}
+                                <div className="text-xs text-slate-500 font-mono">
+                                    Type: {q.questionType}
                                 </div>
                             </div>
 
-                            <h3 className="text-lg font-medium text-gray-900 mb-3">{q.question_text}</h3>
+                            <h3 className="text-lg font-medium text-white mb-4 leading-relaxed group-hover:text-green-400 transition-colors duration-200">{q.questionText}</h3>
 
                             <button
-                                onClick={() => toggleAnswer(q.id)}
-                                className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                                onClick={() => toggleAnswer(q._id)}
+                                className="text-green-400 hover:text-white text-sm font-mono flex items-center gap-1 transition-colors duration-200 cursor-pointer"
                             >
-                                {openAnswerId === q.id ? 'Hide Answer' : 'Show Answer'}
+                                <span className={`material-icons text-[16px] transition-transform duration-300 ${openAnswerId === q._id ? 'rotate-180' : ''}`}>expand_more</span>
+                                {openAnswerId === q._id ? 'Hide Answer' : 'Show Answer'}
                             </button>
 
-                            {openAnswerId === q.id && (
-                                <div className="mt-3 p-4 bg-gray-50 rounded-md text-gray-700 text-sm leading-relaxed border-t border-gray-100">
-                                    {q.answer_text || "Answer not available yet."}
+                            {openAnswerId === q._id && (
+                                <div className="mt-4 p-4 bg-black/20 rounded-lg text-slate-300 text-sm leading-relaxed border-t border-white/5 font-mono">
+                                    Answer not available yet.
                                 </div>
                             )}
                         </div>

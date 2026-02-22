@@ -1,155 +1,122 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import React, { useState } from 'react';
+import { useQuery } from 'convex/react';
+import { api } from '../../convex/_generated/api';
 import './SubjectBrowser.css';
-
-import { API_BASE_URL } from '../config/api';
+import { BorderBeam } from './ui/BorderBeam';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Card, CardContent } from "@/components/ui/card";
 
 const SubjectBrowser = () => {
-    const [branches, setBranches] = useState([]);
-    const [semesters, setSemesters] = useState([]);
-    const [subjects, setSubjects] = useState([]);
-
     const [selectedBranch, setSelectedBranch] = useState('');
     const [selectedSemester, setSelectedSemester] = useState('');
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState(null);
 
-    // Fetch metadata on component mount
-    useEffect(() => {
-        fetchMetadata();
-    }, []);
-
-    // Fetch subjects when filters change
-    useEffect(() => {
-        if (selectedBranch || selectedSemester) {
-            fetchSubjects();
-        }
-    }, [selectedBranch, selectedSemester]);
-
-    const fetchMetadata = async () => {
-        try {
-            const response = await axios.get(`${API_BASE_URL}/subjects/metadata`);
-            if (response.data) {
-                setBranches(response.data.branches || []);
-                setSemesters(response.data.semesters || []);
-            }
-        } catch (err) {
-            console.error('Failed to fetch metadata:', err);
-            setError('Failed to load branches and semesters');
-        }
-    };
-
-    const fetchSubjects = async () => {
-        setLoading(true);
-        setError(null);
-
-        try {
-            const params = {};
-            if (selectedBranch) params.branch = selectedBranch;
-            if (selectedSemester) params.semester = selectedSemester;
-
-            const response = await axios.get(`${API_BASE_URL}/subjects`, { params });
-            setSubjects(response.data.subjects || []);
-        } catch (err) {
-            console.error('Failed to fetch subjects:', err);
-            setError('Failed to load subjects');
-            setSubjects([]);
-        } finally {
-            setLoading(false);
-        }
-    };
+    const metadata = useQuery(api.subjects.getMetadata) ?? { courses: [], branches: [], semesters: [] };
+    const subjects = useQuery(api.subjects.list, {
+        branch: selectedBranch || undefined,
+        semester: selectedSemester || undefined,
+    }) ?? [];
 
     const handleSubjectClick = (subjectCode) => {
-        // Navigate to material viewer
         window.location.href = `/materials/${subjectCode}`;
     };
 
+    // Group subjects by semester
+    const groupedSubjects = subjects.reduce((acc, subject) => {
+        const sem = subject.semester;
+        if (!acc[sem]) acc[sem] = [];
+        acc[sem].push(subject);
+        return acc;
+    }, {});
+
+    // Sort semesters numerically
+    const sortedSemesters = Object.keys(groupedSubjects).sort((a, b) => {
+        const numA = parseInt(a);
+        const numB = parseInt(b);
+        if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+        return a.localeCompare(b);
+    });
+
     return (
-        <div className="subject-browser">
+        <div className="subject-browser relative z-10 w-full">
             <div className="browser-header">
-                <h1>Browse Study Materials</h1>
-                <p>Select your branch and semester to find subjects</p>
+                <h1>Browse GTU Study Materials</h1>
+                <p>Select your branch and semester to find strictly organized subjects and resources</p>
             </div>
 
-            <div className="filters">
-                <div className="filter-group">
-                    <label htmlFor="branch-select">Branch</label>
-                    <select
-                        id="branch-select"
-                        value={selectedBranch}
-                        onChange={(e) => setSelectedBranch(e.target.value)}
-                        className="filter-select"
-                    >
-                        <option value="">All Branches</option>
-                        {branches.map((branch) => (
-                            <option key={branch} value={branch}>
-                                {branch}
-                            </option>
-                        ))}
-                    </select>
-                </div>
+            <Card className="filters glass-panel border-0 p-6 rounded-3xl mb-12 shadow-none bg-transparent">
+                <CardContent className="flex flex-col md:flex-row gap-6 p-0">
+                    <div className="filter-group flex-1">
+                        <label className="block text-sm font-semibold text-gray-300 mb-2 uppercase tracking-wide">Branch</label>
+                        <Select
+                            value={selectedBranch === "" ? "all" : selectedBranch}
+                            onValueChange={(val) => setSelectedBranch(val === "all" ? "" : val)}
+                        >
+                            <SelectTrigger className="w-full p-3.5 border border-white/10 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-black/40 text-white backdrop-blur-xl h-14">
+                                <SelectValue placeholder="All Branches" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-[#1a1a2e] border-white/10 text-white">
+                                <SelectItem value="all">All Branches</SelectItem>
+                                {metadata.branches.map((branch) => (
+                                    <SelectItem key={branch} value={branch}>{branch}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
 
-                <div className="filter-group">
-                    <label htmlFor="semester-select">Semester</label>
-                    <select
-                        id="semester-select"
-                        value={selectedSemester}
-                        onChange={(e) => setSelectedSemester(e.target.value)}
-                        className="filter-select"
-                    >
-                        <option value="">All Semesters</option>
-                        {semesters.map((semester) => (
-                            <option key={semester} value={semester}>
-                                Semester {semester}
-                            </option>
-                        ))}
-                    </select>
-                </div>
-            </div>
+                    <div className="filter-group flex-1">
+                        <label className="block text-sm font-semibold text-gray-300 mb-2 uppercase tracking-wide">Semester</label>
+                        <Select
+                            value={selectedSemester === "" ? "all" : selectedSemester}
+                            onValueChange={(val) => setSelectedSemester(val === "all" ? "" : val)}
+                        >
+                            <SelectTrigger className="w-full p-3.5 border border-white/10 rounded-2xl focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-black/40 text-white backdrop-blur-xl h-14">
+                                <SelectValue placeholder="All Semesters" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-[#1a1a2e] border-white/10 text-white">
+                                <SelectItem value="all">All Semesters</SelectItem>
+                                {metadata.semesters.map((semester) => (
+                                    <SelectItem key={semester} value={semester}>Semester {semester}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </CardContent>
+            </Card>
 
-            {error && (
-                <div className="error-message">
-                    <span className="error-icon">⚠️</span>
-                    {error}
-                </div>
-            )}
-
-            {loading ? (
-                <div className="loading-spinner">
-                    <div className="spinner"></div>
-                    <p>Loading subjects...</p>
-                </div>
+            {subjects.length === 0 ? (
+                <Card className="no-subjects glass-panel border-0 p-12 rounded-3xl mt-8 shadow-none bg-transparent backdrop-blur-md">
+                    <CardContent className="p-0">
+                        <p className="text-gray-300 text-xl font-medium">No subjects found. Try adjusting your filters.</p>
+                    </CardContent>
+                </Card>
             ) : (
-                <div className="subjects-grid">
-                    {subjects.length === 0 ? (
-                        <div className="no-subjects">
-                            <p>No subjects found. Try adjusting your filters.</p>
+                sortedSemesters.map(semester => (
+                    <div key={semester} className="semester-group">
+                        <h2 className="semester-heading text-white mix-blend-plus-lighter">Semester {semester}</h2>
+                        <div className="subjects-grid">
+                            {groupedSubjects[semester].map((subject) => (
+                                <Card
+                                    key={subject._id}
+                                    className="subject-card glass-panel group overflow-hidden relative cursor-pointer border-0 shadow-none bg-transparent"
+                                    onClick={() => handleSubjectClick(subject.subjectCode)}
+                                >
+                                    <CardContent className="relative z-10 flex flex-col h-full bg-transparent p-6 pb-6 pt-6 px-6">
+                                        <div className="subject-code bg-white/5 border border-white/10 text-white font-mono rounded-lg px-2 py-1 absolute top-4 right-4">{subject.subjectCode}</div>
+                                        <h3 className="subject-name text-white font-bold text-xl mt-8 mb-2 leading-snug pr-8">{subject.subjectName}</h3>
+                                        <div className="subject-meta text-gray-400 font-medium">
+                                            <span className="meta-item flex items-center gap-1.5">
+                                                <i className="icon opacity-80">📚</i>
+                                                {subject.credits} Credits
+                                            </span>
+                                        </div>
+                                        <div className="subject-branch text-indigo-400 font-semibold text-sm mt-auto pt-6 tracking-wide uppercase">{subject.branch}</div>
+                                        <BorderBeam size={150} duration={8} delay={Math.random() * 2} className="opacity-0 group-hover:opacity-100 transition-opacity duration-300" colorFrom="#6366f1" colorTo="#ec4899" />
+                                    </CardContent>
+                                </Card>
+                            ))}
                         </div>
-                    ) : (
-                        subjects.map((subject) => (
-                            <div
-                                key={subject.id}
-                                className="subject-card"
-                                onClick={() => handleSubjectClick(subject.subject_code)}
-                            >
-                                <div className="subject-code">{subject.subject_code}</div>
-                                <h3 className="subject-name">{subject.subject_name}</h3>
-                                <div className="subject-meta">
-                                    <span className="meta-item">
-                                        <i className="icon">📚</i>
-                                        {subject.credits} Credits
-                                    </span>
-                                    <span className="meta-item">
-                                        <i className="icon">🎓</i>
-                                        Sem {subject.semester}
-                                    </span>
-                                </div>
-                                <div className="subject-branch">{subject.branch}</div>
-                                <button className="view-materials-btn">View Materials →</button>
-                            </div>
-                        ))
-                    )}
-                </div>
+                    </div>
+                ))
             )}
         </div>
     );

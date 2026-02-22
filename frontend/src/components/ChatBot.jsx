@@ -1,4 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useAction } from 'convex/react';
+import { api } from '../../convex/_generated/api';
 import ReactMarkdown from 'react-markdown';
 
 const ChatBot = () => {
@@ -10,6 +12,7 @@ const ChatBot = () => {
     const [loading, setLoading] = useState(false);
     const [suggestions, setSuggestions] = useState([]);
     const messagesEndRef = useRef(null);
+    const chat = useAction(api.ai.chat);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -26,57 +29,29 @@ const ChatBot = () => {
     const handleSend = async () => {
         if (!input.trim() || loading) return;
 
-        // Add user message
         const userMessage = { text: input, sender: 'user' };
         setMessages(prev => [...prev, userMessage]);
+        const prompt = input;
         setInput('');
         setLoading(true);
-        setSuggestions([]); // Clear previous suggestions
+        setSuggestions([]);
 
         try {
-            // Use local AI service directly (no fallback needed)
-            await sendToAI(input);
+            const response = await chat({ prompt });
+            setMessages(prev => [...prev, { text: response, sender: 'ai' }]);
+            setSuggestions([
+                "Can you explain this in simpler terms?",
+                "Give me an example",
+                "What are the key points?"
+            ]);
         } catch (error) {
             console.error('AI service error:', error);
             setMessages(prev => [...prev, {
-                text: "Sorry, I'm having trouble connecting right now. Please check your internet connection.",
+                text: "Sorry, I'm having trouble connecting right now. Please try again.",
                 sender: 'ai'
             }]);
         } finally {
             setLoading(false);
-        }
-    };
-
-    const sendToAI = async (prompt) => {
-        try {
-            const response = await fetch('/api/ai-assistant', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ prompt }),
-            });
-
-            const data = await response.json();
-
-            if (data.success) {
-                setMessages(prev => [...prev, { text: data.response, sender: 'ai' }]);
-                // For now, we'll add some generic suggestions
-                setSuggestions([
-                    "Can you explain this in simpler terms?",
-                    "Give me an example",
-                    "What are the key points?"
-                ]);
-            } else {
-                const errorMessage = data.error || "Sorry, I encountered an error. Please try again.";
-                setMessages(prev => [...prev, { text: errorMessage, sender: 'ai' }]);
-            }
-        } catch (error) {
-            console.error('Error sending message:', error);
-            setMessages(prev => [...prev, {
-                text: "Sorry, I'm having trouble connecting right now. Please check your internet connection.",
-                sender: 'ai'
-            }]);
         }
     };
 
@@ -123,17 +98,11 @@ const ChatBot = () => {
                     {/* Messages */}
                     <div className="flex-grow p-4 overflow-y-auto bg-gray-50">
                         {messages.map((msg, index) => (
-                            <div
-                                key={index}
-                                className={`mb-3 flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
-                            >
-                                <div
-                                    className={`max-w-[80%] p-3 rounded-lg text-sm ${msg.sender === 'user'
-                                        ? 'bg-blue-600 text-white rounded-br-none'
-                                        : 'bg-white text-gray-800 border border-gray-200 rounded-bl-none shadow-sm'
-                                        }`}
-                                >
-                                    {/* Safe rendering with markdown support */}
+                            <div key={index} className={`mb-3 flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                <div className={`max-w-[80%] p-3 rounded-lg text-sm ${msg.sender === 'user'
+                                    ? 'bg-blue-600 text-white rounded-br-none'
+                                    : 'bg-white text-gray-800 border border-gray-200 rounded-bl-none shadow-sm'
+                                    }`}>
                                     {typeof msg.text === 'string' ? (
                                         <ReactMarkdown
                                             components={{
@@ -201,8 +170,7 @@ const ChatBot = () => {
                             <button
                                 onClick={handleSend}
                                 disabled={loading || !input.trim()}
-                                className={`p-2 rounded-r-md text-white ${loading || !input.trim() ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
-                                    }`}
+                                className={`p-2 rounded-r-md text-white ${loading || !input.trim() ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />

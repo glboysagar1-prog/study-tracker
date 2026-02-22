@@ -1,106 +1,54 @@
-import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import React, { useState } from 'react';
+import { useQuery } from 'convex/react';
+import { api } from '../../convex/_generated/api';
 import LabPrograms from './LabPrograms';
 
-import { API_BASE_URL } from '../config/api';
-
 const AllLabPrograms = () => {
-    const [subjects, setSubjects] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const subjects = useQuery(api.subjects.list, {}) ?? [];
+    const loading = subjects === undefined;
     const [selectedSubject, setSelectedSubject] = useState(null);
-
-    useEffect(() => {
-        fetchSubjects();
-    }, []);
-
-    const fetchSubjects = async () => {
-        try {
-            const response = await fetch(`${API_BASE_URL}/subjects`);
-            const data = await response.json();
-            if (data.subjects) {
-                setSubjects(data.subjects);
-            }
-        } catch (error) {
-            console.error('Error fetching subjects:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
 
     if (selectedSubject) {
         return (
-            <div style={{ padding: '32px', maxWidth: '1400px', margin: '0 auto' }}>
-                <button
-                    onClick={() => setSelectedSubject(null)}
-                    className="btn btn-secondary"
-                    style={{ marginBottom: '24px' }}
-                >
-                    <span className="material-icons" style={{ fontSize: '20px' }}>arrow_back</span>
-                    <span>Back to All Subjects</span>
+            <div className="container mx-auto px-4 py-8 max-w-7xl relative z-10">
+                <button onClick={() => setSelectedSubject(null)} className="mb-8 px-4 py-2 bg-white/5 text-slate-300 hover:text-white hover:bg-white/10 border border-white/10 rounded-lg flex items-center gap-2 transition-all duration-200 cursor-pointer shadow-sm">
+                    <span className="material-icons text-[20px]">arrow_back</span>
+                    <span className="font-medium text-sm">Back to All Subjects</span>
                 </button>
-                <h2 style={{ fontSize: '24px', fontWeight: '700', marginBottom: '20px' }}>
-                    {selectedSubject.subject_name} - Lab Programs
+                <h2 className="text-3xl font-bold text-white mb-8 tracking-tight flex items-center gap-3">
+                    <span className="material-icons text-green-400">code</span>
+                    {selectedSubject.subjectName} - Lab Programs
                 </h2>
-                <LabPrograms subjectCode={selectedSubject.subject_code} />
+                <div className="glass-panel p-6 rounded-2xl border border-white/10">
+                    <LabPrograms subjectCode={selectedSubject.subjectCode} />
+                </div>
             </div>
         );
     }
 
     return (
-        <div style={{ padding: '32px', maxWidth: '1400px', margin: '0 auto' }}>
-            <div style={{ marginBottom: '32px' }}>
-                <h1 style={{ fontSize: '32px', fontWeight: '800', color: 'var(--text)', marginBottom: '8px' }}>
-                    Lab Programs
-                </h1>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '15px' }}>
-                    Access lab programs and practicals for all subjects
-                </p>
+        <div className="container mx-auto px-4 py-8 max-w-7xl relative z-10">
+            <div className="mb-12">
+                <h1 className="text-4xl font-bold text-white mb-2 tracking-tight">Lab Programs <span className="text-green-400">.</span></h1>
+                <p className="text-slate-400 text-lg">Access lab programs and practicals for all subjects</p>
             </div>
 
             {loading ? (
-                <div style={{ textAlign: 'center', padding: '48px', color: 'var(--text-secondary)' }}>
-                    Loading subjects...
-                </div>
+                <div className="text-center py-24 text-slate-500 font-mono animate-pulse">Loading subjects...</div>
             ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '24px' }}>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     {subjects.map((subject) => (
-                        <div
-                            key={subject.id}
-                            onClick={() => setSelectedSubject(subject)}
-                            className="card"
-                            style={{ height: '100%', cursor: 'pointer' }}
-                        >
-                            <div style={{
-                                height: '120px',
-                                background: 'linear-gradient(135deg, #8b5cf6, #6366f1)',
-                                borderRadius: '12px 12px 0 0',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                fontSize: '48px',
-                                marginBottom: '16px'
-                            }}>
-                                💻
+                        <div key={subject._id} onClick={() => setSelectedSubject(subject)} className="bg-card glass-panel rounded-xl group cursor-pointer hover:-translate-y-1 transition-all duration-300 border border-white/10 hover:border-green-500/30 hover:shadow-[0_8px_30px_rgba(34,197,94,0.06)] overflow-hidden flex flex-col h-full">
+                            <div className="h-28 bg-gradient-to-br from-slate-800 to-slate-900 border-b border-white/5 flex items-center justify-center text-5xl mb-4 group-hover:scale-105 transition-transform duration-500">
+                                <span className="drop-shadow-lg">💻</span>
                             </div>
-                            <h3 style={{ fontSize: '18px', fontWeight: '700', color: 'var(--text)', marginBottom: '8px' }}>
-                                {subject.subject_name}
-                            </h3>
-                            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '12px' }}>
-                                {subject.subject_code} • Semester {subject.semester}
-                            </p>
-                            <div style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '6px',
-                                padding: '6px 12px',
-                                background: 'rgba(139, 92, 246, 0.1)',
-                                color: 'var(--secondary)',
-                                borderRadius: '6px',
-                                fontSize: '12px',
-                                fontWeight: '600'
-                            }}>
-                                <span className="material-icons" style={{ fontSize: '16px' }}>code</span>
-                                <span>View Programs</span>
+                            <div className="p-5 flex-1 flex flex-col">
+                                <h3 className="text-lg font-bold text-white mb-2 tracking-tight group-hover:text-green-400 transition-colors duration-200">{subject.subjectName}</h3>
+                                <p className="text-sm font-mono text-slate-500 mb-6 flex-1">{subject.subjectCode} <span className="text-slate-600 mx-1">|</span> Sem {subject.semester}</p>
+                                <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-green-500/10 text-green-400 border border-green-500/20 rounded-lg text-xs font-bold w-fit group-hover:bg-green-500/20 transition-colors duration-200">
+                                    <span className="material-icons text-[16px]">code</span>
+                                    <span>View Programs</span>
+                                </div>
                             </div>
                         </div>
                     ))}
