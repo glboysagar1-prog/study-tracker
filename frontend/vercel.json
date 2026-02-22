@@ -1,14 +1,6 @@
 {
     "rewrites": [
         {
-            "source": "/api/(.*)",
-            "destination": "https://gtu-backend-api.onrender.com/api/$1"
-        },
-        {
-            "source": "/agent/(.*)",
-            "destination": "https://gtu-ai-agent.onrender.com/$1"
-        },
-        {
             "source": "/(.*)",
             "destination": "/index.html"
         }
